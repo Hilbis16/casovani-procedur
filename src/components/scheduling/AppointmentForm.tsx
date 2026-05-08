@@ -1,32 +1,32 @@
-"use client";
+'use client'
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { createSchedule, updateSchedule, deleteSchedule } from "@/actions/scheduleActions";
-import { START_TIMES, CATEGORIES } from "@/lib/constants";
-import { addMinutes, formatDateParam } from "@/lib/dateUtils";
-import type { Patient, Therapist, Procedure, ProcedureSchedule } from "@prisma/client";
+import { useEffect, useRef, useState, useTransition } from 'react'
+import { createSchedule, updateSchedule, deleteSchedule } from '@/actions/scheduleActions'
+import { START_TIMES, CATEGORIES } from '@/lib/constants'
+import { addMinutes, formatDateParam } from '@/lib/dateUtils'
+import type { Patient, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
 
 type FullSchedule = ProcedureSchedule & {
-  patient: Patient;
-  therapist: Therapist;
-  procedure: Procedure;
-};
+  patient: Patient
+  therapist: Therapist
+  procedure: Procedure
+}
 
 interface Props {
-  patients: Patient[];
-  therapists: Therapist[];
-  procedures: Procedure[];
-  initialDate?: Date;
-  initialStartTime?: string;
-  initialPatientId?: number;
-  schedule?: FullSchedule;
-  onClose: () => void;
-  onSuccess: () => void;
+  patients: Patient[]
+  therapists: Therapist[]
+  procedures: Procedure[]
+  initialDate?: Date
+  initialStartTime?: string
+  initialPatientId?: number
+  schedule?: FullSchedule
+  onClose: () => void
+  onSuccess: () => void
 }
 
 interface Conflict {
-  type: string;
-  message: string;
+  type: string
+  message: string
 }
 
 export function AppointmentForm({
@@ -40,31 +40,37 @@ export function AppointmentForm({
   onClose,
   onSuccess,
 }: Props) {
-  const isEdit = !!schedule;
+  const isEdit = !!schedule
 
-  const [patientId, setPatientId] = useState(schedule?.patientId?.toString() ?? initialPatientId?.toString() ?? "");
-  const [procedureId, setProcedureId] = useState(schedule?.procedureId?.toString() ?? "");
-  const [therapistId, setTherapistId] = useState(schedule?.therapistId?.toString() ?? "");
+  const [patientId, setPatientId] = useState(
+    schedule?.patientId?.toString() ?? initialPatientId?.toString() ?? ''
+  )
+  const [procedureId, setProcedureId] = useState(schedule?.procedureId?.toString() ?? '')
+  const [therapistId, setTherapistId] = useState(schedule?.therapistId?.toString() ?? '')
   const [date, setDate] = useState(
-    schedule ? formatDateParam(new Date(schedule.date)) : initialDate ? formatDateParam(initialDate) : ""
-  );
-  const [startTime, setStartTime] = useState(schedule?.startTime ?? initialStartTime ?? "08:00");
-  const [note, setNote] = useState(schedule?.note ?? "");
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+    schedule
+      ? formatDateParam(new Date(schedule.date))
+      : initialDate
+        ? formatDateParam(initialDate)
+        : ''
+  )
+  const [startTime, setStartTime] = useState(schedule?.startTime ?? initialStartTime ?? '08:00')
+  const [note, setNote] = useState(schedule?.note ?? '')
+  const [conflicts, setConflicts] = useState<Conflict[]>([])
+  const [error, setError] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const selectedProcedure = procedures.find((p) => p.id.toString() === procedureId);
-  const durationMin = selectedProcedure?.durationMin ?? 0;
-  const endTime = durationMin ? addMinutes(startTime, durationMin) : "";
+  const selectedProcedure = procedures.find((p) => p.id.toString() === procedureId)
+  const durationMin = selectedProcedure?.durationMin ?? 0
+  const endTime = durationMin ? addMinutes(startTime, durationMin) : ''
+
+  const hasRequiredFields = !!(patientId && therapistId && date && startTime && durationMin)
+  const effectiveConflicts = hasRequiredFields ? conflicts : []
 
   useEffect(() => {
-    if (!patientId || !therapistId || !date || !startTime || !durationMin) {
-      setConflicts([]);
-      return;
-    }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!patientId || !therapistId || !date || !startTime || !durationMin) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       const params = new URLSearchParams({
         patientId,
@@ -73,59 +79,66 @@ export function AppointmentForm({
         startTime,
         durationMin: durationMin.toString(),
         ...(isEdit ? { excludeId: schedule!.id.toString() } : {}),
-      });
-      const res = await fetch(`/api/konflikty?${params}`);
-      const data = await res.json();
-      setConflicts(data.conflicts ?? []);
-    }, 300);
-  }, [patientId, therapistId, date, startTime, durationMin, isEdit, schedule]);
+      })
+      const res = await fetch(`/api/konflikty?${params}`)
+      const data = await res.json()
+      setConflicts(data.conflicts ?? [])
+    }, 300)
+  }, [patientId, therapistId, date, startTime, durationMin, isEdit, schedule])
 
-  const grouped = Object.entries(CATEGORIES).map(([key, label]) => ({
-    label,
-    items: procedures.filter((p) => p.category === key),
-  })).filter((g) => g.items.length > 0);
+  const grouped = Object.entries(CATEGORIES)
+    .map(([key, label]) => ({
+      label,
+      items: procedures.filter((p) => p.category === key),
+    }))
+    .filter((g) => g.items.length > 0)
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (conflicts.length > 0) return;
-    setError("");
+    e.preventDefault()
+    if (effectiveConflicts.length > 0) return
+    setError('')
 
-    const fd = new FormData();
-    fd.set("patientId", patientId);
-    fd.set("procedureId", procedureId);
-    fd.set("therapistId", therapistId);
-    fd.set("date", date);
-    fd.set("startTime", startTime);
-    fd.set("durationMin", durationMin.toString());
-    fd.set("note", note);
+    const fd = new FormData()
+    fd.set('patientId', patientId)
+    fd.set('procedureId', procedureId)
+    fd.set('therapistId', therapistId)
+    fd.set('date', date)
+    fd.set('startTime', startTime)
+    fd.set('durationMin', durationMin.toString())
+    fd.set('note', note)
 
     startTransition(async () => {
-      const result = isEdit
-        ? await updateSchedule(schedule!.id, fd)
-        : await createSchedule(fd);
+      const result = isEdit ? await updateSchedule(schedule!.id, fd) : await createSchedule(fd)
 
       if (result.success) {
-        onSuccess();
+        onSuccess()
       } else {
-        setError(result.error ?? "Chyba při ukládání");
+        setError(result.error ?? 'Chyba při ukládání')
       }
-    });
+    })
   }
 
   async function handleDelete() {
-    if (!confirm("Opravdu smazat tuto proceduru?")) return;
+    if (!confirm('Opravdu smazat tuto proceduru?')) return
     startTransition(async () => {
-      await deleteSchedule(schedule!.id);
-      onSuccess();
-    });
+      await deleteSchedule(schedule!.id)
+      onSuccess()
+    })
   }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="font-semibold text-lg">{isEdit ? "Upravit proceduru" : "Nová procedura"}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+          <h2 className="font-semibold text-lg">
+            {isEdit ? 'Upravit proceduru' : 'Nová procedura'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+          >
+            ✕
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
@@ -204,21 +217,23 @@ export function AppointmentForm({
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {START_TIMES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Konec</label>
               <div className="border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 h-[38px] flex items-center">
-                {endTime || "—"}
+                {endTime || '—'}
               </div>
             </div>
           </div>
 
-          {conflicts.length > 0 && (
+          {effectiveConflicts.length > 0 && (
             <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 space-y-1">
-              {conflicts.map((c, i) => (
+              {effectiveConflicts.map((c, i) => (
                 <p key={i} className="text-sm text-amber-800">
                   ⚠ {c.message}
                 </p>
@@ -226,9 +241,7 @@ export function AppointmentForm({
             </div>
           )}
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Poznámka</label>
@@ -262,14 +275,21 @@ export function AppointmentForm({
             )}
             <button
               type="submit"
-              disabled={isPending || conflicts.length > 0 || !patientId || !procedureId || !therapistId || !date}
+              disabled={
+                isPending ||
+                effectiveConflicts.length > 0 ||
+                !patientId ||
+                !procedureId ||
+                !therapistId ||
+                !date
+              }
               className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isPending ? "Ukládám..." : "Uložit →"}
+              {isPending ? 'Ukládám...' : 'Uložit →'}
             </button>
           </div>
         </form>
       </div>
     </div>
-  );
+  )
 }

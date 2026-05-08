@@ -6,11 +6,45 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 
 ---
 
+## [0.2.0] – 2026-05-08
+
+### Přidáno
+
+- **ESLint flat config** (`eslint.config.mjs`) — Next.js core-web-vitals + Prettier integrace; `no-restricted-imports` pro budoucí hranice modulů (Phase 0: warn)
+- **Prettier** (`.prettierrc.json`, `.prettierignore`) — jednotný formát kódu
+- **lint-staged + Husky** — automatický lint+format před commitem
+- **Vitest** + `@testing-library/react` — unit test framework; 9 testů pro `conflictDetection.ts`
+- **`.editorconfig`** — LF line endings, UTF-8, 2-space indent
+- **`.env.example`** — dokumentované proměnné pro všechny fáze
+- **`deploy/dev/docker-compose.yml`** — PostgreSQL 16 + Adminer pro dev prostředí
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) — lint, typecheck, test, build na Node 22 s Postgres service
+- **`docs/`** — kompletní skeleton: ARCHITECTURE.md, MIGRATION.md, SECURITY.md, COMPLIANCE.md, RUNBOOK.md, CONTRIBUTING.md, INSTALL.md
+- **`docs/adr/0001–0008`** — Architecture Decision Records: PostgreSQL, Prisma, Auth.js, modulární monolit, field encryption, soft-delete, single-tenant, event bus
+
+### Změněno
+
+- **PostgreSQL** — databáze přepnuta z SQLite na PostgreSQL (`prisma/schema.prisma` provider)
+- **Prisma 6.19.3** — upgrade z 5.22 na 6.x (latest stable před Prisma 7 breaking changes)
+- **lucide-react** — opravena verze z `^1.9.0` na `^1.14.0`
+- **`AppointmentForm.tsx`** — opravena React `set-state-in-effect` chyba (derivovaný `effectiveConflicts`)
+- **`.gitignore`** — rozšířen o `*.db`, `*.db-journal`, `.claude/`
+
+### npm skripty
+
+- `lint` — `eslint src`
+- `lint:fix` — `eslint src --fix`
+- `format` — `prettier --write .`
+- `typecheck` — `tsc --noEmit`
+- `test` — `vitest run`
+
+---
+
 ## [0.1.0] – 2026-04-24
 
 ### Přidáno
 
 #### Datový model (Prisma ORM)
+
 - **Patient** – model pro hosty lázeňství
   - Základní info: jméno, příjmení, číslo pokoje
   - Período pobytu: datum příjezdu, datum odjezdu
@@ -34,6 +68,7 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
   - Timestamps: createdAt, updatedAt
 
 #### Backend & API
+
 - Next.js 16 App Router setup
 - TypeScript pro type safety
 - SQLite databáze s Prisma 5.22
@@ -45,6 +80,7 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 - API endpoint pro detekci konfliktů: `src/app/api/konflikty/route.ts`
 
 #### Frontend
+
 - **Layout & Navigation**
   - `src/components/layout/MainNav.tsx` – hlavní navigace
   - `src/app/layout.tsx` – root layout
@@ -65,6 +101,7 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
   - `src/components/patients/PatientForm.tsx` – formulář pro pacienty
 
 #### Styling & UI
+
 - TailwindCSS 4 s PostCSS pluginem
 - Radix UI komponenty:
   - React Dialog (modály)
@@ -78,6 +115,7 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 - Lucide React pro ikony
 
 #### Seed data
+
 - Testovací script: `prisma/seed.ts`
 - **3 terapeuta:**
   - Jan Novák (modrá) – 7:00–15:00 Po-Pa
@@ -98,6 +136,7 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 - **11 naplánovaných procedur** – příklady pro UI
 
 #### Konfigurace & nástrojů
+
 - `.env.local` – lokální konfigurace (DATABASE_URL)
 - `tailwind.config.js` – TailwindCSS config
 - `tsconfig.json` – TypeScript config
@@ -129,6 +168,7 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 ## Formát verzionování
 
 Projekt následuje [Semantic Versioning](https://semver.org/):
+
 - **MAJOR** – Breaking změny v API nebo datovém modelu
 - **MINOR** – Nové features zpětně kompatibilní
 - **PATCH** – Bug fixů a opravy
@@ -136,6 +176,7 @@ Projekt následuje [Semantic Versioning](https://semver.org/):
 ## Pokyny pro budoucí zápisy
 
 Při další aktualizaci changelagu:
+
 1. Přidej nový oddíl `[X.Y.Z] – YYYY-MM-DD` pod `[Unreleased]`
 2. Categorizuj změny do sekcí: **Přidáno**, **Změněno**, **Odstraněno**, **Opraveno**, **Bezpečnost**
 3. Udržuj seznam sortovaný (nejnovější nahoře)
