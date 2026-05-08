@@ -12,6 +12,7 @@ model Patient {
   firstName     String
   lastName      String
   roomNumber    String
+  building      String?
   arrivalDate   DateTime
   departureDate DateTime
   note          String?
@@ -57,6 +58,8 @@ model Procedure {
   category    String
   durationMin Int
   description String?
+  room        String?
+  building    String?
   isActive    Boolean @default(true)
 
   schedules ProcedureSchedule[]

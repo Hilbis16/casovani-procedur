@@ -21,6 +21,7 @@ interface Props {
   procedures: Procedure[];
   filterPatientId?: number;
   filterTherapistId?: number;
+  filterRoom?: string;
   readOnly?: boolean;
 }
 
@@ -52,6 +53,7 @@ export function WeeklyGrid({
   procedures,
   filterPatientId,
   filterTherapistId,
+  filterRoom,
   readOnly = false,
 }: Props) {
   const router = useRouter();
@@ -84,6 +86,7 @@ export function WeeklyGrid({
   const filteredSchedules = schedules.filter((s) => {
     if (filterPatientId && s.patientId !== filterPatientId) return false;
     if (filterTherapistId && s.therapistId !== filterTherapistId) return false;
+    if (filterRoom && s.procedure.room !== filterRoom) return false;
     return true;
   });
 
@@ -105,7 +108,7 @@ export function WeeklyGrid({
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="min-w-[700px]">
           {/* Header */}
-          <div className="grid border-b border-gray-200" style={{ gridTemplateColumns: "60px repeat(6, 1fr)" }}>
+          <div className="grid border-b border-gray-200" style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}>
             <div className="py-2 px-2 text-xs text-gray-400 text-center border-r border-gray-100" />
             {weekDays.map((day, i) => {
               const isToday = sameDay(day, new Date());
@@ -126,7 +129,7 @@ export function WeeklyGrid({
           </div>
 
           {/* Body */}
-          <div className="grid" style={{ gridTemplateColumns: "60px repeat(6, 1fr)" }}>
+          <div className="grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}>
             {/* Hour labels */}
             <div className="relative border-r border-gray-100" style={{ height: GRID_HEIGHT }}>
               {hours.map((h, i) => (
@@ -192,14 +195,19 @@ export function WeeklyGrid({
                           <div className="text-xs font-semibold truncate" style={{ color }}>
                             {s.procedure.name}
                           </div>
-                          {height >= 30 && (
+                          {height >= 28 && (
                             <div className="text-xs text-gray-600 truncate">
                               {filterPatientId
                                 ? `● ${s.therapist.lastName}`
                                 : `${s.patient.lastName}`}
                             </div>
                           )}
-                          {height >= 40 && (
+                          {height >= 40 && s.procedure.room && (
+                            <div className="text-xs text-gray-400 truncate">
+                              📍 {s.procedure.room}
+                            </div>
+                          )}
+                          {height >= 54 && (
                             <div className="text-xs text-gray-400">
                               {s.startTime}–{s.endTime}
                             </div>

@@ -8,6 +8,7 @@ const PatientSchema = z.object({
   firstName: z.string().min(1, "Jméno je povinné"),
   lastName: z.string().min(1, "Příjmení je povinné"),
   roomNumber: z.string().min(1, "Číslo pokoje je povinné"),
+  building: z.string().optional(),
   arrivalDate: z.string().min(1, "Datum příjezdu je povinné"),
   departureDate: z.string().min(1, "Datum odjezdu je povinné"),
   note: z.string().optional(),
@@ -21,6 +22,7 @@ export async function getPatients(query?: string) {
             { firstName: { contains: query } },
             { lastName: { contains: query } },
             { roomNumber: { contains: query } },
+            { building: { contains: query } },
           ],
         }
       : undefined,
@@ -37,12 +39,13 @@ export async function createPatient(formData: FormData) {
   const parsed = PatientSchema.safeParse(raw);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const { firstName, lastName, roomNumber, arrivalDate, departureDate, note } = parsed.data;
+  const { firstName, lastName, roomNumber, building, arrivalDate, departureDate, note } = parsed.data;
   await prisma.patient.create({
     data: {
       firstName,
       lastName,
       roomNumber,
+      building: building || null,
       arrivalDate: new Date(arrivalDate),
       departureDate: new Date(departureDate),
       note: note || null,
@@ -57,13 +60,14 @@ export async function updatePatient(id: number, formData: FormData) {
   const parsed = PatientSchema.safeParse(raw);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const { firstName, lastName, roomNumber, arrivalDate, departureDate, note } = parsed.data;
+  const { firstName, lastName, roomNumber, building, arrivalDate, departureDate, note } = parsed.data;
   await prisma.patient.update({
     where: { id },
     data: {
       firstName,
       lastName,
       roomNumber,
+      building: building || null,
       arrivalDate: new Date(arrivalDate),
       departureDate: new Date(departureDate),
       note: note || null,

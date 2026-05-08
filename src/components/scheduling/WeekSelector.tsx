@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function WeekSelector({ weekStart, baseHref }: Props) {
-  const weekEnd = addDays(weekStart, 5);
+  const weekEnd = addDays(weekStart, 6);
   const prevWeek = addDays(weekStart, -7);
   const nextWeek = addDays(weekStart, 7);
 

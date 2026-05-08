@@ -44,7 +44,7 @@ export default async function PacientDetailPage({
             {patient.lastName} {patient.firstName}
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Pokoj {patient.roomNumber} · Pobyt: {formatCzechFull(new Date(patient.arrivalDate))} – {formatCzechFull(new Date(patient.departureDate))}
+            {patient.building ? `${patient.building} · ` : ""}Pokoj {patient.roomNumber} · Pobyt: {formatCzechFull(new Date(patient.arrivalDate))} – {formatCzechFull(new Date(patient.departureDate))}
           </p>
           {patient.note && (
             <p className="text-amber-700 text-sm mt-1 bg-amber-50 px-3 py-1 rounded-lg inline-block">
@@ -52,12 +52,26 @@ export default async function PacientDetailPage({
             </p>
           )}
         </div>
-        <Link
-          href={`/pacienti/${patient.id}/upravit`}
-          className="px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Upravit
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/pacienti/${patient.id}/pobyt`}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Plánovat pobyt
+          </Link>
+          <Link
+            href={`/pacienti/${patient.id}/tisk`}
+            className="px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Tisknout rozvrh
+          </Link>
+          <Link
+            href={`/pacienti/${patient.id}/upravit`}
+            className="px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Upravit
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mb-4">

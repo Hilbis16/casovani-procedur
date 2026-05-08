@@ -6,7 +6,7 @@ export function getWeekStart(date: Date): Date {
 }
 
 export function getWeekDays(weekStart: Date): Date[] {
-  return Array.from({ length: 6 }, (_, i) => addDays(weekStart, i));
+  return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 }
 
 export function formatCzechDate(date: Date): string {

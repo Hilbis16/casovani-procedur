@@ -18,6 +18,7 @@ interface Props {
   procedures: Procedure[];
   initialDate?: Date;
   initialStartTime?: string;
+  initialPatientId?: number;
   schedule?: FullSchedule;
   onClose: () => void;
   onSuccess: () => void;
@@ -34,13 +35,14 @@ export function AppointmentForm({
   procedures,
   initialDate,
   initialStartTime,
+  initialPatientId,
   schedule,
   onClose,
   onSuccess,
 }: Props) {
   const isEdit = !!schedule;
 
-  const [patientId, setPatientId] = useState(schedule?.patientId?.toString() ?? "");
+  const [patientId, setPatientId] = useState(schedule?.patientId?.toString() ?? initialPatientId?.toString() ?? "");
   const [procedureId, setProcedureId] = useState(schedule?.procedureId?.toString() ?? "");
   const [therapistId, setTherapistId] = useState(schedule?.therapistId?.toString() ?? "");
   const [date, setDate] = useState(

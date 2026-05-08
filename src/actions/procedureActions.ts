@@ -9,6 +9,8 @@ const ProcedureSchema = z.object({
   category: z.string().min(1, "Kategorie je povinná"),
   durationMin: z.coerce.number().int().min(5, "Minimálně 5 minut"),
   description: z.string().optional(),
+  building: z.string().optional(),
+  room: z.string().optional(),
 });
 
 export async function getProcedures() {
@@ -29,9 +31,9 @@ export async function createProcedure(formData: FormData) {
   const parsed = ProcedureSchema.safeParse(raw);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const { name, category, durationMin, description } = parsed.data;
+  const { name, category, durationMin, description, building, room } = parsed.data;
   await prisma.procedure.create({
-    data: { name, category, durationMin, description: description || null },
+    data: { name, category, durationMin, description: description || null, building: building || null, room: room || null },
   });
   revalidatePath("/procedury");
   return { success: true };
@@ -42,10 +44,10 @@ export async function updateProcedure(id: number, formData: FormData) {
   const parsed = ProcedureSchema.safeParse(raw);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const { name, category, durationMin, description } = parsed.data;
+  const { name, category, durationMin, description, building, room } = parsed.data;
   await prisma.procedure.update({
     where: { id },
-    data: { name, category, durationMin, description: description || null },
+    data: { name, category, durationMin, description: description || null, building: building || null, room: room || null },
   });
   revalidatePath("/procedury");
   return { success: true };

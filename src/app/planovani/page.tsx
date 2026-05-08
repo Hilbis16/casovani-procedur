@@ -1,11 +1,8 @@
-import { Suspense } from "react";
-import Link from "next/link";
 import { getWeekSchedules } from "@/actions/scheduleActions";
 import { getPatients } from "@/actions/patientActions";
 import { getTherapists } from "@/actions/therapistActions";
 import { getProcedures } from "@/actions/procedureActions";
-import { WeeklyGrid } from "@/components/scheduling/WeeklyGrid";
-import { WeekSelector } from "@/components/scheduling/WeekSelector";
+import { PlanningView } from "@/components/scheduling/PlanningView";
 import { getWeekDays, parseWeekParam } from "@/lib/dateUtils";
 
 export default async function PlanovaniPage({
@@ -26,22 +23,15 @@ export default async function PlanovaniPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Plánování procedur</h1>
-        <div className="flex items-center gap-3">
-          <WeekSelector weekStart={weekStart} baseHref="/planovani" />
-        </div>
-      </div>
-
-      <Suspense fallback={<div className="h-96 bg-white rounded-xl animate-pulse" />}>
-        <WeeklyGrid
-          weekDays={weekDays}
-          schedules={schedules}
-          patients={patients}
-          therapists={therapists}
-          procedures={procedures}
-        />
-      </Suspense>
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Plánování procedur</h1>
+      <PlanningView
+        weekDays={weekDays}
+        weekStart={weekStart}
+        schedules={schedules}
+        patients={patients}
+        therapists={therapists}
+        procedures={procedures}
+      />
     </div>
   );
 }

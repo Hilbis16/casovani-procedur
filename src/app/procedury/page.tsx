@@ -40,7 +40,15 @@ export default async function ProceduresPage() {
                           <span className="ml-2 text-sm text-gray-400">{p.description}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 text-sm">{p.durationMin} min</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">{p.durationMin} min</td>
+                      <td className="px-4 py-3 text-sm">
+                        {p.building && (
+                          <span className="text-gray-800 font-semibold">{p.building}</span>
+                        )}
+                        {p.building && p.room && <span className="mx-1 text-gray-400">·</span>}
+                        {p.room && <span className="text-gray-700 font-medium">{p.room}</span>}
+                        {!p.building && !p.room && <span className="text-gray-300">—</span>}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                           p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"

@@ -8,13 +8,14 @@ const NAV_ITEMS = [
   { href: "/pacienti", label: "Pacienti" },
   { href: "/terapeuti", label: "Terapeuti" },
   { href: "/procedury", label: "Procedury" },
+  { href: "/prehled", label: "Denní přehled" },
 ];
 
 export function MainNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-sm">
+    <nav className="bg-white border-b border-gray-200 shadow-sm print:hidden">
       <div className="max-w-screen-xl mx-auto px-4 flex items-center gap-8 h-14">
         <span className="font-semibold text-blue-700 text-lg shrink-0">🏥 Lázeňský dům</span>
         <div className="flex gap-1">

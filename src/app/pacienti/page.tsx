@@ -44,24 +44,41 @@ export default async function PacientiPage({
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Jméno</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Pokoj</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Budova / Pokoj</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Příjezd</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Odjezd</th>
-                <th />
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {patients.map((p) => (
                 <tr key={p.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {p.lastName} {p.firstName}
+                  <td className="p-0">
+                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 font-medium text-gray-900">
+                      {p.lastName} {p.firstName}
+                    </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">Pokoj {p.roomNumber}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCzechFull(new Date(p.arrivalDate))}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCzechFull(new Date(p.departureDate))}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/pacienti/${p.id}`} className="text-blue-600 text-sm hover:underline">
-                      Detail →
+                  <td className="p-0">
+                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 text-gray-600">
+                      {p.building ? `${p.building} · ` : ""}Pokoj {p.roomNumber}
+                    </Link>
+                  </td>
+                  <td className="p-0">
+                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 text-gray-600">
+                      {formatCzechFull(new Date(p.arrivalDate))}
+                    </Link>
+                  </td>
+                  <td className="p-0">
+                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 text-gray-600">
+                      {formatCzechFull(new Date(p.departureDate))}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <Link
+                      href={`/pacienti/${p.id}/upravit`}
+                      className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      Upravit
                     </Link>
                   </td>
                 </tr>

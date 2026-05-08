@@ -62,15 +62,26 @@ export function PatientForm({ patient }: Props) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Číslo pokoje *</label>
-        <input
-          name="roomNumber"
-          required
-          defaultValue={patient?.roomNumber}
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="např. 12"
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Budova</label>
+          <input
+            name="building"
+            defaultValue={patient?.building ?? ""}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="např. A, Zámeček"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Číslo pokoje *</label>
+          <input
+            name="roomNumber"
+            required
+            defaultValue={patient?.roomNumber}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="např. 12"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
