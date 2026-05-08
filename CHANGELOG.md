@@ -6,6 +6,15 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 
 ---
 
+## [0.2.1] – 2026-05-08 (hotfix)
+
+### Opraveno
+
+- **Dev Postgres port 5435** — na lokálním stroji vývojáře byl obsazen port 5432 nativním `postgres.exe`; `deploy/dev/docker-compose.yml` přesunut na host port 5435
+- **PostgreSQL migrace** — smazána stará SQLite migrace `20260423211445_init`; vytvořena čistá PostgreSQL migrace `20260508165632_init`
+
+---
+
 ## [0.2.0] – 2026-05-08
 
 ### Přidáno

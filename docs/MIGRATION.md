@@ -22,9 +22,11 @@ Append-only log: každá Prisma migrace, datum, důvod, rollback postup.
 
 ---
 
-## Baseline — Phase 0
+## `20260508165632_init` — Phase 0 (PostgreSQL baseline)
 
 **Datum:** 2026-05-08  
-**Obsah:** Přepnutí DB provideru z SQLite na PostgreSQL; existující schéma beze změn  
-**Důvod:** Dev/prod parita, PostgreSQL funkce (indexy, CHECK constraints, pg-boss, šifrování)  
-**Rollback:** Změna `provider` zpět na `sqlite` v `prisma/schema.prisma` (pouze pro dev)
+**Soubor:** `prisma/migrations/20260508165632_init/migration.sql`  
+**Obsah:** Kompletní initial schema pro PostgreSQL — Patient, Therapist, TherapistAvailability, Procedure, ProcedureSchedule  
+**Důvod:** Přechod z SQLite na PostgreSQL (dev/prod parita); stará SQLite migrace `20260423211445_init` smazána  
+**Rollback:** Jen pro dev — `docker compose down -v` smaže volume + data; `docker compose up -d && npx prisma migrate dev`  
+**Poznámka:** Port dev PostgreSQL je **5435** (5432 obsazen lokálním postgres.exe). `DATABASE_URL` v `.env` musí obsahovat `localhost:5435`.

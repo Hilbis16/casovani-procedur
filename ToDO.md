@@ -13,6 +13,7 @@ Kompletní akční plán pro postupnou transformaci MVP do produkční, GDPR/zá
 Aplikace je dnes funkční MVP (Next.js 16 + React 19 + Prisma 5 + SQLite). Všechny CRUD funkce, týdenní grid, recurring procedury i základní detekce konfliktů fungují.
 
 **Cíl:** nasazení do českých zdravotnických zařízení musí splnit:
+
 - GDPR (Nařízení EU 2016/679)
 - Zákon č. 110/2019 Sb. (zpracování osobních údajů)
 - Zákon č. 372/2011 Sb. (zdravotní služby — audit trail, RBAC)
@@ -25,37 +26,37 @@ Současně architektura musí být připravena na pozdější **hotelový modul*
 
 ## Locked-in rozhodnutí
 
-| # | Rozhodnutí | Hodnota |
-|---|---|---|
-| D1 | Tenancy | **Single-tenant per facility** (každé zařízení = vlastní instance, vlastní DB) |
-| D2 | Databáze | **PostgreSQL od Phase 0** (i pro dev, přes Docker Compose) |
-| D3 | Deployment | **Self-hosted Docker u klienta** |
-| D4 | Velikost klienta | **Malé/střední (5–30 zaměstnanců)**, NIS2 architektonicky připraveno |
+| #   | Rozhodnutí       | Hodnota                                                                        |
+| --- | ---------------- | ------------------------------------------------------------------------------ |
+| D1  | Tenancy          | **Single-tenant per facility** (každé zařízení = vlastní instance, vlastní DB) |
+| D2  | Databáze         | **PostgreSQL od Phase 0** (i pro dev, přes Docker Compose)                     |
+| D3  | Deployment       | **Self-hosted Docker u klienta**                                               |
+| D4  | Velikost klienta | **Malé/střední (5–30 zaměstnanců)**, NIS2 architektonicky připraveno           |
 
 ---
 
 ## Tech stack (cílový)
 
-| Vrstva | Volba |
-|---|---|
-| Runtime | Node 22 LTS |
-| Framework | Next.js 16 (App Router) — pozor na breaking changes vs. 14/15 |
-| UI | React 19, Tailwind 4, Radix UI, lucide-react (oprava `^1.9.0` → `^0.462.0`) |
-| Formuláře | `react-hook-form` + `@hookform/resolvers/zod` |
-| Validace | zod (existující) |
-| ORM | Prisma 6 (upgrade z 5.22) |
-| Databáze | PostgreSQL 16 |
-| Auth | Auth.js v5 (NextAuth), DB sessions, argon2id |
-| Šifrování PII | `prisma-field-encryption` (AES-256-GCM, app-layer) |
-| Background jobs | `pg-boss` (Postgres-native) |
-| Logování | Pino + redakce |
-| Error tracking | Sentry self-hosted (volitelně) |
-| Storage | MinIO (Docker, S3-compatible) |
-| TLS | Caddy auto-cert |
-| Backupy | pgBackRest |
-| Testy | Vitest + Playwright + testcontainers |
-| Lint/format | ESLint flat config + Prettier + lint-staged + Husky |
-| CI | GitHub Actions |
+| Vrstva          | Volba                                                         |
+| --------------- | ------------------------------------------------------------- |
+| Runtime         | Node 22 LTS                                                   |
+| Framework       | Next.js 16 (App Router) — pozor na breaking changes vs. 14/15 |
+| UI              | React 19, Tailwind 4, Radix UI, lucide-react `^1.14.0`        |
+| Formuláře       | `react-hook-form` + `@hookform/resolvers/zod`                 |
+| Validace        | zod (existující)                                              |
+| ORM             | Prisma 6.19.3 (Prisma 7 má breaking changes — odkládáme)      |
+| Databáze        | PostgreSQL 16                                                 |
+| Auth            | Auth.js v5 (NextAuth), DB sessions, argon2id                  |
+| Šifrování PII   | `prisma-field-encryption` (AES-256-GCM, app-layer)            |
+| Background jobs | `pg-boss` (Postgres-native)                                   |
+| Logování        | Pino + redakce                                                |
+| Error tracking  | Sentry self-hosted (volitelně)                                |
+| Storage         | MinIO (Docker, S3-compatible)                                 |
+| TLS             | Caddy auto-cert                                               |
+| Backupy         | pgBackRest                                                    |
+| Testy           | Vitest + Playwright + testcontainers                          |
+| Lint/format     | ESLint flat config + Prettier + lint-staged + Husky           |
+| CI              | GitHub Actions                                                |
 
 ---
 
@@ -79,6 +80,7 @@ src/
 ```
 
 **Pravidla závislostí (vynucená ESLint `no-restricted-imports`):**
+
 - Modul může importovat z `@/modules/core/*` a `@/components/ui/*`.
 - Modul **nesmí** importovat z jiného modulu.
 - `src/app/` může importovat odkudkoli.
@@ -86,60 +88,67 @@ src/
 
 ---
 
-## Phase 0 — Foundation (1 týden)
+## ✅ Phase 0 — Foundation (HOTOVO — 2026-05-08, tag `v0.2.0`)
 
 **Cíl:** infrastruktura, kvalita kódu, parita dev/prod databáze.
 
 ### Tooling
-- [ ] ESLint flat config + `eslint-plugin-import` + `no-restricted-imports` (zatím warn)
-- [ ] Prettier + `.prettierrc.json`
-- [ ] lint-staged + Husky pre-commit
-- [ ] Vitest setup + sample test pro `conflictDetection.ts`
-- [ ] Playwright setup + smoke test pro `/`
-- [ ] GitHub Actions workflow: lint, typecheck, test, build (Node 22)
+
+- [x] ESLint flat config + `no-restricted-imports` (zatím warn) → `eslint.config.mjs`
+- [x] Prettier + `.prettierrc.json` + `.prettierignore`
+- [x] lint-staged + Husky pre-commit hook
+- [x] Vitest setup + 9 unit testů pro `conflictDetection.ts`
+- [ ] ~~Playwright setup + smoke test pro `/`~~ — odloženo na Phase 1 (vyžaduje auth)
+- [x] GitHub Actions workflow: lint, typecheck, test, build (Node 22 + Postgres service)
 
 ### Dependency hygiene
-- [ ] Oprava `lucide-react` z `^1.9.0` na `^0.462.0`
-- [ ] Upgrade Prisma 5.22 → 6.x
-- [ ] `npm audit` cleanup
+
+- [x] Oprava `lucide-react` → `^1.14.0` (1.x série je aktuální; 0.462.0 cíl byl zastaralý)
+- [x] Upgrade Prisma 5.22 → 6.19.3 (Prisma 7 má breaking changes — `url` v schema; odkládáme)
+- [x] `AppointmentForm.tsx` — opravena `react-hooks/set-state-in-effect` chyba
 
 ### Databáze
-- [ ] Vytvořit `deploy/dev/docker-compose.yml`: postgres + adminer
-- [ ] Přepsat `prisma/schema.prisma` provider z `sqlite` na `postgresql`
-- [ ] Přepsat `prisma/seed.ts` pro Postgres (existující SQLite data se nezachrávají)
-- [ ] Smazat `dev.db` z working tree
-- [ ] Rozšířit `.gitignore` o `*.db`, `*.db-journal`
+
+- [x] `deploy/dev/docker-compose.yml` — PostgreSQL 16 + Adminer (port **5435**, 5432 obsazen lokálním postgres.exe)
+- [x] `prisma/schema.prisma` provider: sqlite → postgresql
+- [x] Smazána stará SQLite migrace; vytvořena PostgreSQL migrace `20260508165632_init`
+- [x] `prisma/seed.ts` funguje beze změn pro Postgres (3 terapeuti, 4 pacienti, 6 procedur, 11 plánů)
+- [x] `dev.db` odstraněn z working tree (byl v root, ne v `/prisma/`)
+- [x] `.gitignore` rozšířen o `*.db`, `*.db-journal`, `.claude/`, `!.env.example`
 
 ### Konfigurace
-- [ ] Vytvořit `.env.example` se všemi required vars (DATABASE_URL, NEXTAUTH_SECRET, ENCRYPTION_KEY, ...)
-- [ ] Dokumentovat env vars v `docs/CONTRIBUTING.md`
 
-### Dokumentace skeleton (vytvořit `docs/` adresář)
-- [ ] `docs/ARCHITECTURE.md` — modulová mapa, mermaid diagram
-- [ ] `docs/adr/0001-postgres.md` — proč Postgres
-- [ ] `docs/adr/0002-prisma.md` — proč Prisma 6
-- [ ] `docs/adr/0003-authjs-v5.md` — proč Auth.js
-- [ ] `docs/adr/0004-modular-monolith.md`
-- [ ] `docs/adr/0005-app-layer-encryption.md`
-- [ ] `docs/adr/0006-soft-delete.md`
-- [ ] `docs/adr/0007-single-tenant-per-facility.md`
-- [ ] `docs/adr/0008-event-bus.md`
-- [ ] `docs/adr/0009-no-supabase.md` — proč ne Supabase (lean stack, self-host overhead)
-- [ ] `docs/adr/0010-operator-controller-separation.md` — dvouvrstvý role model (Operator vs Facility)
-- [ ] `docs/MIGRATION.md` — append-only log migrací (založit prázdný)
-- [ ] `docs/RUNBOOK.md` — backup/restore/on-call (založit prázdný)
-- [ ] `docs/CONTRIBUTING.md` — dev setup, branch policy, PR template
-- [ ] `docs/INSTALL.md` — instalace u klienta (Docker Compose)
-- [ ] `docs/SECURITY.md` — threat model, incident playbook (založit prázdný)
-- [ ] `docs/COMPLIANCE.md` — GDPR mapping, retention schedule (založit prázdný)
-- [ ] `docs/OPERATOR_HANDBOOK.md` — **interní příručka, nedává se klientům** (deployment, break-glass procedury, fleet management)
-- [ ] `docs/templates/SMLOUVA_O_ZPRACOVANI.md` — DPA template per GDPR Art. 28 (podepisuje se s každým klientem)
+- [x] `.env.example` — dokumentované proměnné pro všechny fáze (Phase 0–8)
+- [x] `.editorconfig` — LF, UTF-8, 2-space indent
+
+### Dokumentace
+
+- [x] `docs/ARCHITECTURE.md` — modulová mapa, dependency rules, tech stack, data flow
+- [x] `docs/adr/0001-postgresql.md` — proč Postgres (ne SQLite/MySQL)
+- [x] `docs/adr/0002-prisma.md` — proč Prisma 6 (ne Drizzle)
+- [x] `docs/adr/0003-authjs.md` — proč Auth.js v5 (ne Lucia/custom)
+- [x] `docs/adr/0004-modularni-monolit.md` — proč ne mikroslužby
+- [x] `docs/adr/0005-field-encryption.md` — proč app-layer (ne pgcrypto)
+- [x] `docs/adr/0006-soft-delete.md` — proč ne CASCADE
+- [x] `docs/adr/0007-single-tenant.md` — proč ne multi-tenant
+- [x] `docs/adr/0008-event-bus.md` — in-memory → pg-boss outbox roadmapa
+- [ ] `docs/adr/0009-no-supabase.md` — přidat v Phase 1
+- [ ] `docs/adr/0010-operator-controller-separation.md` — přidat v Phase 2
+- [x] `docs/MIGRATION.md` — append-only log (baseline záznam)
+- [x] `docs/RUNBOOK.md` — operační příručka (dev, deploy, zálohy, incident response)
+- [x] `docs/CONTRIBUTING.md` — dev setup, branch policy, PR pravidla
+- [x] `docs/INSTALL.md` — instalace u klienta (Docker Compose)
+- [x] `docs/SECURITY.md` — STRIDE threat model, security headers, incident response
+- [x] `docs/COMPLIANCE.md` — GDPR+zákony mapping, retention schedule, sub-processors
+- [ ] `docs/OPERATOR_HANDBOOK.md` — přidat v Phase 2 (break-glass, fleet)
+- [ ] `docs/templates/SMLOUVA_O_ZPRACOVANI.md` — přidat v Phase 6
 
 ### CHANGELOG
-- [ ] Aktualizovat `CHANGELOG.md` `[Unreleased]` o Phase 0 změny
-- [ ] Tag `v0.2.0`
 
-**DoD:** `npm run lint && npm test && npm run build` zelené v CI; `docker compose up` postaví dev prostředí; seed naplní Postgres.
+- [x] `CHANGELOG.md` aktualizován — sekce `[0.2.0]`
+- [x] Tag `v0.2.0`
+
+**DoD ověření:** `npm run lint` ✅ | `npm test` (9/9) ✅ | `npm run build` ✅ | `docker compose up` → Postgres běží na 5435 ✅ | `npm run seed` ✅
 
 ---
 
@@ -148,6 +157,7 @@ src/
 **Cíl:** žádný endpoint není veřejný, každý write je auditovaný.
 
 ### Schema migrace (Wave A)
+
 - [ ] Přidat `Facility` model (jeden řádek, branding/config)
 - [ ] Přidat `User`, `Role`, `Permission`, `UserRole`, `Session` modely
 - [ ] Přidat `AuditLog` model s indexy
@@ -156,6 +166,7 @@ src/
 - [ ] Záznam v `docs/MIGRATION.md`
 
 ### Auth.js v5
+
 - [ ] Nainstalovat `next-auth@5`, adapter, argon2
 - [ ] `src/modules/core/auth/config.ts` — Auth.js config
 - [ ] `src/modules/core/auth/getCurrentUser.ts`
@@ -165,6 +176,7 @@ src/
 - [ ] Seed admin user z env vars při prvním startu
 
 ### Audit log
+
 - [ ] `src/modules/core/audit/auditLogger.ts` — writer
 - [ ] `src/modules/core/audit/withAudit.ts` — wrapper na server actions
 - [ ] Aplikovat `withAudit()` na všech existujících server actions:
@@ -174,26 +186,31 @@ src/
   - [ ] `src/actions/therapistActions.ts`
 
 ### Security headers
+
 - [ ] `next.config.ts` — CSP s nonce, HSTS, X-Frame-Options DENY, X-Content-Type-Options, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy
 - [ ] `next.config.ts` — `experimental.serverActions.allowedOrigins`
 - [ ] `src/middleware.ts` — auth gate (kromě `/prihlaseni`, `/api/health`, `/zasady-ochrany-osobnich-udaju`), CSP nonce per request
 
 ### Session security
+
 - [ ] HttpOnly + Secure + SameSite=Lax cookies
 - [ ] 12h sliding expiry
 - [ ] Force re-auth před privilegovanými ops (delete patient, export data)
 
 ### Operator bootstrap
+
 - [ ] Seed **OPERATOR** uživatele (David) z env vars `OPERATOR_EMAIL`, `OPERATOR_PASSWORD_HASH` při prvním startu
 - [ ] Seed prvního **FACILITY_ADMIN** uživatele z env vars (klient si po loginu změní heslo)
 - [ ] Operator login flow používá stejný `/prihlaseni`, ale po úspěchu redirectne na `/operator` (ne na `/planovani`)
 - [ ] Operator session má jiný cookie scope (`operator-session`) — separace od facility user sessions
 
 ### Health endpoint
+
 - [ ] `/api/health` route (DB + storage ping; veřejný)
 - [ ] `/api/operator/heartbeat` (operator-only, podepsaný `OPERATOR_FLEET_TOKEN`) — vrací verzi, počet uživatelů, last-migration; **bez PII**
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.3.0`
 
@@ -208,6 +225,7 @@ src/
 ### Dvouvrstvý role model
 
 **System level (cross-facility, vlastní vy):**
+
 - [ ] Seed role `OPERATOR` s permissions:
   - `operator.system.*` (deploy, migrate, restart, restore)
   - `operator.metrics.read` (vytížení, error rate, počty)
@@ -215,6 +233,7 @@ src/
   - `operator.breakglass.activate` (spustit time-limited PII přístup)
 
 **Facility level (within one zařízení, vlastní klient):**
+
 - [ ] Seed role `FACILITY_ADMIN` s permissions:
   - `user.manage` (CRUD facility users)
   - `role.assign` (přiřazování klinických rolí)
@@ -223,12 +242,14 @@ src/
   - všechny clinical permissions
 
 **Clinical roles (within facility):**
+
 - [ ] Seed role `LEKAR` — read+write všechna pacientská data, `schedule.*`, `prescription.*`
 - [ ] Seed role `TERAPEUT` — `schedule.read`, `schedule.update_status` (vlastní procedury), `patient.read` (jen vlastní pacienty)
 - [ ] Seed role `RECEPCNI` — `patient.read+write`, `schedule.create+update`, `stay.read` (Phase 7+)
 - [ ] Seed role `AUDITOR` — read-only `audit.read`, `patient.read` (s warning bannerem o důvodu)
 
 ### Permission infrastruktura
+
 - [ ] Rozdělit `Permission.action` namespace: `operator.*` vs facility-level
 - [ ] `src/modules/core/rbac/can.ts` — `can(user, action, resource)` helper
 - [ ] `src/modules/core/rbac/ForbiddenError.ts`
@@ -237,6 +258,7 @@ src/
 - [ ] Operator nemůže defaultně volat clinical server actions (nevidí Patient.note v service responses) — service objekty PII redactují podle `user.role`
 
 ### Break-glass mechanismus
+
 - [ ] Nový model `OperatorSession`:
   - `id`, `operatorId`, `reason` (text), `ticketId?`, `activatedAt`, `expiresAt`, `revokedAt?`, `notifiedFacilityAdmin: boolean`
 - [ ] UI `/operator/breakglass`:
@@ -251,6 +273,7 @@ src/
 - [ ] `/spravce/audit` zobrazuje sekci "Operator přístupy" — všechny operator sessions s důvody, časy, počtem dotčených záznamů
 
 ### Operator UI
+
 - [ ] Routy `/operator/*` chráněné `requireOperator()` middleware
 - [ ] `/operator` — dashboard (verze, last migration, last backup, počet aktivních uživatelů)
 - [ ] `/operator/audit` — system-level audit (deploys, migrations, operator sessions)
@@ -258,17 +281,20 @@ src/
 - [ ] `/operator/system` — env, feature flags (toggle Sentry, …), maintenance mode
 
 ### Facility admin UI
+
 - [ ] `/spravce/uzivatele` — CRUD facility users (FACILITY_ADMIN only)
 - [ ] `/spravce/role` — read-only zobrazení rolí + permissions
 - [ ] `/spravce/audit` — read-only `AuditLog`, **včetně sekce operator přístupů**
 - [ ] `/spravce/facility` — config zařízení (branding, IČO, kontakty, DPO)
 
 ### Testy
+
 - [ ] Playwright e2e `auth-rbac.spec.ts` — pokrývá všech 6 rolí (OPERATOR, FACILITY_ADMIN, LEKAR, TERAPEUT, RECEPCNI, AUDITOR)
 - [ ] Test break-glass: bez session OPERATOR dostane 403 na `/spravce/pacienti`; s aktivní session OK; po expire 403
 - [ ] Test redactionu: OPERATOR bez break-glass vidí v `/operator/audit` v `before/after` jen `[REDACTED]` na PII polích
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.4.0`
 
@@ -281,6 +307,7 @@ src/
 **Cíl:** Stay/Room/Building entity, soft-delete, indexy, příprava pro hotel modul.
 
 ### Schema migrace (Wave B)
+
 - [ ] Přidat `Building` model
 - [ ] Přidat `Room` model + `RoomKind` enum (PATIENT_ROOM | PROCEDURE_ROOM | OFFICE)
 - [ ] Přidat `Stay` model + `StayStatus` enum (PLANNED | CHECKED_IN | CHECKED_OUT | CANCELLED) + `code` business ID
@@ -301,6 +328,7 @@ src/
 - [ ] Záznam v `docs/MIGRATION.md`
 
 ### Backfill skripty
+
 - [ ] Vytvořit `Building` pro každý unikátní `Patient.building` a `Procedure.building`
 - [ ] Vytvořit `Room` pro každou unikátní `(building, roomNumber)` kombinaci
 - [ ] Vytvořit `Stay` per existující Patient (status podle `now()`)
@@ -308,12 +336,14 @@ src/
 - [ ] Smoke test: všechny `ProcedureSchedule.stayId` non-null
 
 ### Conflict detection rozšíření
+
 - [ ] `src/lib/conflictDetection.ts` — přidat **room overlap** check
 - [ ] Přidat **TherapistAvailability** check (existující bug — pole se načítá ale nikdy nevyhodnocuje)
 - [ ] Přidat **TherapistTimeOff** check
 - [ ] Unit testy: ≥10 cases v `conflictDetection.test.ts`
 
 ### UI fixy z `plan.md`
+
 - [ ] `AppointmentForm` — přidat status field (planned/completed/cancelled) — fix #5
 - [ ] `StayPlanningView` — číst ze `Stay`, ne z `Patient`
 - [ ] `procedury/[id]/upravit` — přepsat z client na server component (fix #4)
@@ -321,6 +351,7 @@ src/
 - [ ] Validace dat pobytu (checkin <= checkout) v zod (fix #12)
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.5.0`
 
@@ -333,6 +364,7 @@ src/
 **Cíl:** code base má `src/modules/{core,scheduling}` strukturu.
 
 ### Přesuny
+
 - [ ] `src/actions/*` → `src/modules/scheduling/actions/`
 - [ ] `src/components/scheduling/*` → `src/modules/scheduling/components/`
 - [ ] `src/components/patients/*` → split mezi `core/components/` a `scheduling/components/`
@@ -342,6 +374,7 @@ src/
 - [ ] `src/lib/prisma.ts` → `src/modules/core/db/`
 
 ### Nové soubory
+
 - [ ] `src/modules/core/services/patientService.ts`
 - [ ] `src/modules/core/services/stayService.ts`
 - [ ] `src/modules/core/services/roomService.ts`
@@ -355,13 +388,16 @@ src/
 - [ ] `src/modules/core/events/bus.ts` — in-memory pub/sub
 
 ### App routes refactor
+
 - [ ] `src/app/*/page.tsx` na tenké shells (jen import + render z modules)
 
 ### ESLint
+
 - [ ] Přepnout `no-restricted-imports` z warn na error
 - [ ] Přidat path alias `@/modules/*` do `tsconfig.json`
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.6.0`
 
@@ -385,6 +421,7 @@ src/
 - [ ] Test: `pg_dump --data-only | grep birthNumber` → ciphertext only
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.7.0`
 
@@ -397,22 +434,26 @@ src/
 **Cíl:** splnit GDPR Art. 13, 15, 17.
 
 ### Privacy & consent
+
 - [ ] Stránka `/zasady-ochrany-osobnich-udaju` (Czech, schválené právníkem klienta)
 - [ ] DPO kontakt v patičce všech stránek
 - [ ] Patient consent record při vytvoření (`Patient.consents` JSONB pole)
 - [ ] Cookie banner (jen pokud Sentry session replay nebo analytics zapnuté)
 
 ### Subject Access Request (SAR)
+
 - [ ] `src/modules/core/gdpr/sar.ts` — export-all-data
 - [ ] `/spravce/pacienti/[id]/export` — JSON + signed PDF
 - [ ] `@react-pdf/renderer` integration v `src/modules/reporting/pdf/`
 
 ### Right to erasure
+
 - [ ] `src/modules/core/gdpr/anonymize.ts` — replace name s `Pacient #cuid`
 - [ ] Audit log zachován s původními hodnotami v `before`
 - [ ] UI tlačítko v admin sekci s confirmation modal
 
 ### Compliance dokumenty
+
 - [ ] `docs/COMPLIANCE.md` — GDPR článek → kód mapping, retention schedule, sub-processors list
 - [ ] `docs/DPIA.md` — data flow diagram (mermaid), rizika, mitigace per data flow
 - [ ] `docs/templates/SMLOUVA_O_ZPRACOVANI.md` — DPA template (GDPR Art. 28):
@@ -427,6 +468,7 @@ src/
 - [ ] `docs/templates/PROHLASENI_O_OCHRANE_DAT.md` — text pro patičku klientových stránek (kdo je správce, kontakt na DPO, jaká práva pacient má)
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.8.0`
 
@@ -451,6 +493,7 @@ src/
 - [ ] Unit testy `eventBus.test.ts` pokrývají všechny subscribers
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.9.0`
 
@@ -463,15 +506,18 @@ src/
 **Cíl:** připraveno na ostrý provoz.
 
 ### Rate limiting
+
 - [ ] `npm install rate-limiter-flexible`
 - [ ] `src/modules/core/auth/rateLimit.ts` — Postgres backend
 - [ ] Aplikovat na `/api/auth/*` a write server actions
 
 ### Error tracking (volitelně)
+
 - [ ] Sentry self-hosted Docker Compose addon
 - [ ] PII scrubbing v `beforeSend` hook
 
 ### Background jobs
+
 - [ ] `npm install pg-boss`
 - [ ] Nahradit in-memory event bus za **outbox pattern** (event row ve stejné transakci jako business write, worker drainuje)
 - [ ] `src/modules/core/jobs/retention.ts` — nightly:
@@ -479,19 +525,23 @@ src/
   - anonymize `Stay` > 5 let po cancellu
 
 ### Backupy
+
 - [ ] pgBackRest config (full + incremental + WAL archiving, šifrované)
 - [ ] Offsite cíl (klient určí — vlastní S3? Externí provider?)
 - [ ] Dokumentovat restore drill v `docs/RUNBOOK.md`
 - [ ] Provést první restore drill end-to-end
 
 ### Health & monitoring
+
 - [ ] Rozšířit `/api/health` o queue + storage ping
 - [ ] Strukturované Pino logs do stdout (Docker log driver na disk klienta)
 
 ### Performance
+
 - [ ] k6 load test 200 RPS baseline (dokumentovat v `docs/RUNBOOK.md`)
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v0.10.0`
 
@@ -504,21 +554,25 @@ src/
 **Cíl:** klient si nasadí instanci za hodinu.
 
 ### Docker Compose prod
+
 - [ ] `deploy/docker-compose.prod.yml`: app + postgres + caddy + minio + pgbackrest
 - [ ] `deploy/.env.example`
 - [ ] `deploy/caddy/Caddyfile.example`
 - [ ] `deploy/install.sh` — idempotent setup script
 
 ### Dokumentace
+
 - [ ] `docs/INSTALL.md` — jednostránkový průvodce pro klientovo IT
 - [ ] Upgrade procedura (zero-downtime nebo plánované okno)
 - [ ] Smoke test post-deploy: curl `/api/health`, login, create test patient
 
 ### Verifikace
+
 - [ ] Junior dev nasadí čistou facility instanci za <60 minut podle dokumentace
 - [ ] Restore drill pro nasazenou instanci
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v1.0.0` — **první produkční release**
 
@@ -616,6 +670,7 @@ src/
 - [ ] Sekce: Eskalace (kdy zapojit právníka, kdy notifikovat ÚOOÚ)
 
 ### CHANGELOG
+
 - [ ] Aktualizovat `CHANGELOG.md`
 - [ ] Tag `v1.1.0`
 
@@ -629,16 +684,16 @@ Compliance proud (Phase 0–9) řeší, **aby aplikace SMĚLA běžet** v zdravo
 
 Oba proudy jdou paralelně. SE úkoly se přidávají do sprintů ruku v ruce s compliance fázemi:
 
-| Compliance | Doporučený SE souběh |
-|---|---|
-| Phase 1 (auth) | SE-2 (status workflow) — malé UI změny, neblokuje auth |
-| Phase 2 (RBAC) | SE-3 (capacity dashboard) — využije RBAC pro permissions |
-| Phase 3 (schema redesign) | **SE-1 (conflict v2)** — patří přímo do Phase 3 |
-| Phase 4 (module restructure) | SE-4 (drag & drop) |
-| Phase 5 (encryption) | SE-5 (recurring série editace) |
-| Phase 6 (GDPR UX) | SE-6 (suggest free slots) |
-| Phase 7 (hotel modul) | SE-7 (prescription planner) — **killer feature** |
-| Phase 8 (hardening) | SE-8 (per-therapist daily print) |
+| Compliance                   | Doporučený SE souběh                                     |
+| ---------------------------- | -------------------------------------------------------- |
+| Phase 1 (auth)               | SE-2 (status workflow) — malé UI změny, neblokuje auth   |
+| Phase 2 (RBAC)               | SE-3 (capacity dashboard) — využije RBAC pro permissions |
+| Phase 3 (schema redesign)    | **SE-1 (conflict v2)** — patří přímo do Phase 3          |
+| Phase 4 (module restructure) | SE-4 (drag & drop)                                       |
+| Phase 5 (encryption)         | SE-5 (recurring série editace)                           |
+| Phase 6 (GDPR UX)            | SE-6 (suggest free slots)                                |
+| Phase 7 (hotel modul)        | SE-7 (prescription planner) — **killer feature**         |
+| Phase 8 (hardening)          | SE-8 (per-therapist daily print)                         |
 
 ---
 
@@ -810,45 +865,45 @@ Oba proudy jdou paralelně. SE úkoly se přidávají do sprintů ruku v ruce s 
 
 ### Souhrn business value SE proudu
 
-| SE # | Co to lázním přinese |
-|---|---|
-| SE-1 | Recepční nedělá kolize — klesá počet stížností pacientů |
-| SE-2 | Vykazování pojišťovně (proběhlé procedury) má jasná data |
-| SE-3 | Manažerka optimalizuje směny terapeutů na základě dat |
-| SE-4 | Recepční ušetří ~10 min/den drobnými přesuny |
-| SE-5 | Změny celé série (odjezd, výměna terapeuta) jsou triviální |
-| SE-6 | "Najít volný slot" = auto-řešení kolizí |
+| SE # | Co to lázním přinese                                                        |
+| ---- | --------------------------------------------------------------------------- |
+| SE-1 | Recepční nedělá kolize — klesá počet stížností pacientů                     |
+| SE-2 | Vykazování pojišťovně (proběhlé procedury) má jasná data                    |
+| SE-3 | Manažerka optimalizuje směny terapeutů na základě dat                       |
+| SE-4 | Recepční ušetří ~10 min/den drobnými přesuny                                |
+| SE-5 | Změny celé série (odjezd, výměna terapeuta) jsou triviální                  |
+| SE-6 | "Najít volný slot" = auto-řešení kolizí                                     |
 | SE-7 | **Plánování pobytu z předpisu = 30 min → 3 min.** Hlavní prodejní argument. |
-| SE-8 | Terapeuti vědí ráno co mají dělat — méně chaosu |
+| SE-8 | Terapeuti vědí ráno co mají dělat — méně chaosu                             |
 
 ---
 
 ## Bezpečnost & compliance — kontrolní matice
 
-| # | Kontrola | Regulace | Phase | Effort |
-|---|---|---|---|---|
-| 1 | Auth.js v5 + DB sessions, argon2id | GDPR Art. 32, §16 Vyhl. 98/2012 | 1 | L |
-| 2 | Audit log + `withAudit()` wrapper | §53 Z. 372/2011, GDPR Art. 30 | 1 | M |
-| 3 | RBAC (5 rolí + `can()` helper) | §27 Z. 372/2011 | 2 | M |
-| 4 | Security headers (CSP nonce, HSTS, ...) | NIS2 Annex, GDPR Art. 32 | 1 | S |
-| 5 | CSRF (`serverActions.allowedOrigins`) | OWASP, GDPR Art. 32 | 1 | S |
-| 6 | Rate limiting auth + write actions | NIS2 | 8 | S |
-| 7 | App-layer encryption sensitive PII | GDPR Art. 32(1)(a), §5 Z. 110/2019 | 5 | M |
-| 8 | TLS Caddy auto-cert + HSTS | GDPR Art. 32 | 9 | S |
-| 9 | Session security (HttpOnly, Secure, ...) | §16 Vyhl. 98/2012 | 1 | S |
-| 10 | Retention worker (audit, stays) | Vyhl. 98/2012 §3 | 8 | M |
-| 11 | GDPR consent record per patient | GDPR Art. 6, 7 | 6 | M |
-| 12 | Privacy policy + DPO kontakt | GDPR Art. 13 | 6 | S |
-| 13 | SAR + right-to-erasure | GDPR Art. 15, 17 | 6 | L |
-| 14 | DPIA dokument | GDPR Art. 35 | 6 | M |
-| 15 | Breach response plan | GDPR Art. 33 | 6 | S |
-| 16 | Backup + restore drill | NIS2 Art. 21 | 8 | M |
-| 17 | Smazání `dev.db` z working tree, `.gitignore` | GDPR Art. 32 | 0 | S |
-| 18 | Operator/Controller separace (vy = zpracovatel, klient = správce) | GDPR Art. 28 | 1, 2 | M |
-| 19 | Break-glass mechanismus pro PII přístup | GDPR Art. 28(3)(b), §27 Z. 372/2011 | 2 | M |
-| 20 | DPA template (Smlouva o zpracování) | GDPR Art. 28 | 6 | M |
-| 21 | Fleet console **bez PII** + HMAC heartbeat | GDPR Art. 28(3)(c) | 10 | M |
-| 22 | OPERATOR_HANDBOOK (interní procesní dokument) | NIS2 Art. 21 | 0, 10 | M |
+| #   | Kontrola                                                          | Regulace                            | Phase | Effort |
+| --- | ----------------------------------------------------------------- | ----------------------------------- | ----- | ------ |
+| 1   | Auth.js v5 + DB sessions, argon2id                                | GDPR Art. 32, §16 Vyhl. 98/2012     | 1     | L      |
+| 2   | Audit log + `withAudit()` wrapper                                 | §53 Z. 372/2011, GDPR Art. 30       | 1     | M      |
+| 3   | RBAC (5 rolí + `can()` helper)                                    | §27 Z. 372/2011                     | 2     | M      |
+| 4   | Security headers (CSP nonce, HSTS, ...)                           | NIS2 Annex, GDPR Art. 32            | 1     | S      |
+| 5   | CSRF (`serverActions.allowedOrigins`)                             | OWASP, GDPR Art. 32                 | 1     | S      |
+| 6   | Rate limiting auth + write actions                                | NIS2                                | 8     | S      |
+| 7   | App-layer encryption sensitive PII                                | GDPR Art. 32(1)(a), §5 Z. 110/2019  | 5     | M      |
+| 8   | TLS Caddy auto-cert + HSTS                                        | GDPR Art. 32                        | 9     | S      |
+| 9   | Session security (HttpOnly, Secure, ...)                          | §16 Vyhl. 98/2012                   | 1     | S      |
+| 10  | Retention worker (audit, stays)                                   | Vyhl. 98/2012 §3                    | 8     | M      |
+| 11  | GDPR consent record per patient                                   | GDPR Art. 6, 7                      | 6     | M      |
+| 12  | Privacy policy + DPO kontakt                                      | GDPR Art. 13                        | 6     | S      |
+| 13  | SAR + right-to-erasure                                            | GDPR Art. 15, 17                    | 6     | L      |
+| 14  | DPIA dokument                                                     | GDPR Art. 35                        | 6     | M      |
+| 15  | Breach response plan                                              | GDPR Art. 33                        | 6     | S      |
+| 16  | Backup + restore drill                                            | NIS2 Art. 21                        | 8     | M      |
+| 17  | Smazání `dev.db` z working tree, `.gitignore`                     | GDPR Art. 32                        | 0     | S      |
+| 18  | Operator/Controller separace (vy = zpracovatel, klient = správce) | GDPR Art. 28                        | 1, 2  | M      |
+| 19  | Break-glass mechanismus pro PII přístup                           | GDPR Art. 28(3)(b), §27 Z. 372/2011 | 2     | M      |
+| 20  | DPA template (Smlouva o zpracování)                               | GDPR Art. 28                        | 6     | M      |
+| 21  | Fleet console **bez PII** + HMAC heartbeat                        | GDPR Art. 28(3)(c)                  | 10    | M      |
+| 22  | OPERATOR_HANDBOOK (interní procesní dokument)                     | NIS2 Art. 21                        | 0, 10 | M      |
 
 ---
 
