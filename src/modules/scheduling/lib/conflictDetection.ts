@@ -1,4 +1,5 @@
 import { prisma } from '@/modules/core/db/prisma'
+import { addMinutes, timeToMinutes, minutesToTime } from '@/modules/core/lib/dateUtils'
 
 export interface ConflictResult {
   type:
@@ -143,4 +144,96 @@ export async function findConflicts(params: {
   }
 
   return conflicts
+}
+
+export async function findFreeSlots(params: {
+  therapistId: string
+  patientId: string
+  date: Date
+  durationMin: number
+  procedureId?: string
+  excludeScheduleId?: string
+  maxResults?: number
+}): Promise<string[]> {
+  const {
+    therapistId,
+    patientId,
+    date,
+    durationMin,
+    procedureId,
+    excludeScheduleId,
+    maxResults = 5,
+  } = params
+
+  const dayStart = new Date(date)
+  dayStart.setUTCHours(0, 0, 0, 0)
+  const dayEnd = new Date(dayStart)
+  dayEnd.setUTCHours(23, 59, 59, 999)
+
+  const dayOfWeek = dayStart.getUTCDay()
+  const availability = await prisma.therapistAvailability.findFirst({
+    where: { therapistId, dayOfWeek },
+  })
+  if (!availability) return []
+
+  const timeOffs = await prisma.therapistTimeOff.findMany({
+    where: { therapistId, startsAt: { lte: dayEnd }, endsAt: { gte: dayStart } },
+  })
+  if (timeOffs.length > 0) return []
+
+  const orConditions: object[] = [{ therapistId }, { patientId }]
+  if (procedureId) orConditions.push({ procedureId })
+
+  const schedules = await prisma.procedureSchedule.findMany({
+    where: {
+      date: { gte: dayStart, lte: dayEnd },
+      status: { not: 'cancelled' },
+      deletedAt: null,
+      ...(excludeScheduleId ? { id: { not: excludeScheduleId } } : {}),
+      OR: orConditions,
+    },
+  })
+
+  let procedureCapacity = Infinity
+  if (procedureId) {
+    const proc = await prisma.procedure.findUnique({
+      where: { id: procedureId },
+      select: { capacity: true },
+    })
+    if (proc) procedureCapacity = proc.capacity
+  }
+
+  const availStart = timeToMinutes(availability.startTime)
+  const latestStart = timeToMinutes(availability.endTime) - durationMin
+  const STEP = 15
+  const results: string[] = []
+
+  for (let t = availStart; t <= latestStart; t += STEP) {
+    const slotStart = minutesToTime(t)
+    const slotEnd = addMinutes(slotStart, durationMin)
+
+    const therapistBusy = schedules.some(
+      (s) =>
+        s.therapistId === therapistId &&
+        intervalsOverlap(s.startTime, s.endTime, slotStart, slotEnd)
+    )
+    const patientBusy = schedules.some(
+      (s) =>
+        s.patientId === patientId && intervalsOverlap(s.startTime, s.endTime, slotStart, slotEnd)
+    )
+    const procedureFull =
+      isFinite(procedureCapacity) &&
+      schedules.filter(
+        (s) =>
+          s.procedureId === procedureId &&
+          intervalsOverlap(s.startTime, s.endTime, slotStart, slotEnd)
+      ).length >= procedureCapacity
+
+    if (!therapistBusy && !patientBusy && !procedureFull) {
+      results.push(slotStart)
+      if (results.length >= maxResults) break
+    }
+  }
+
+  return results
 }

@@ -68,6 +68,7 @@ export function AppointmentForm({
   const [status, setStatus] = useState(schedule?.status ?? 'planned')
   const [note, setNote] = useState(schedule?.note ?? '')
   const [conflicts, setConflicts] = useState<Conflict[]>([])
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
@@ -92,9 +93,12 @@ export function AppointmentForm({
         ...(isEdit ? { excludeId: schedule!.id } : {}),
         ...(procedureId ? { procedureId } : {}),
       })
-      const res = await fetch(`/api/konflikty?${params}`)
-      const data = await res.json()
-      setConflicts(data.conflicts ?? [])
+      const [konfliktyRes, navrhyRes] = await Promise.all([
+        fetch(`/api/konflikty?${params}`).then((r) => r.json()),
+        fetch(`/api/navrhy?${params}`).then((r) => r.json()),
+      ])
+      setConflicts(konfliktyRes.conflicts ?? [])
+      setSuggestions(navrhyRes.slots ?? [])
     }, 300)
   }, [patientId, procedureId, therapistId, date, startTime, durationMin, isEdit, schedule])
 
@@ -262,12 +266,31 @@ export function AppointmentForm({
           )}
 
           {effectiveConflicts.length > 0 && (
-            <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 space-y-1">
-              {effectiveConflicts.map((c, i) => (
-                <p key={i} className="text-sm text-amber-800">
-                  ⚠ {c.message}
-                </p>
-              ))}
+            <div className="space-y-2">
+              <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 space-y-1">
+                {effectiveConflicts.map((c, i) => (
+                  <p key={i} className="text-sm text-amber-800">
+                    ⚠ {c.message}
+                  </p>
+                ))}
+              </div>
+              {suggestions.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs font-medium text-blue-700 mb-2">Volné alternativy:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {suggestions.map((slot) => (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setStartTime(slot)}
+                        className="px-2.5 py-1 bg-white border border-blue-300 rounded text-sm text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors font-mono"
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
