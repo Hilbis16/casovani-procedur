@@ -1,46 +1,50 @@
-"use client";
+'use client'
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { createPatient, updatePatient, deletePatient } from "@/actions/patientActions";
-import type { Patient } from "@prisma/client";
-import { formatDateParam } from "@/lib/dateUtils";
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { createPatient, updatePatient, deletePatient } from '@/actions/patientActions'
+import type { Patient, Stay } from '@prisma/client'
+import { formatDateParam } from '@/lib/dateUtils'
 
 interface Props {
-  patient?: Patient;
+  patient?: Patient
+  stay?: Stay | null
 }
 
-export function PatientForm({ patient }: Props) {
-  const router = useRouter();
-  const isEdit = !!patient;
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+export function PatientForm({ patient, stay }: Props) {
+  const router = useRouter()
+  const isEdit = !!patient
+  const [error, setError] = useState('')
+  const [isPending, startTransition] = useTransition()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
-    const fd = new FormData(e.currentTarget);
+    e.preventDefault()
+    setError('')
+    const fd = new FormData(e.currentTarget)
 
     startTransition(async () => {
-      const result = isEdit ? await updatePatient(patient!.id, fd) : await createPatient(fd);
+      const result = isEdit ? await updatePatient(patient!.id, fd) : await createPatient(fd)
       if (result.success) {
-        router.push("/pacienti");
+        router.push('/pacienti')
       } else {
-        setError(result.error ?? "Chyba při ukládání");
+        setError(result.error ?? 'Chyba při ukládání')
       }
-    });
+    })
   }
 
   async function handleDelete() {
-    if (!confirm("Opravdu smazat tohoto pacienta? Budou smazány i všechny jeho procedury.")) return;
+    if (!confirm('Opravdu smazat tohoto pacienta? Budou smazány i všechny jeho procedury.')) return
     startTransition(async () => {
-      await deletePatient(patient!.id);
-      router.push("/pacienti");
-    });
+      await deletePatient(patient!.id)
+      router.push('/pacienti')
+    })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4 max-w-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4 max-w-lg"
+    >
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Jméno *</label>
@@ -64,44 +68,26 @@ export function PatientForm({ patient }: Props) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Budova</label>
-          <input
-            name="building"
-            defaultValue={patient?.building ?? ""}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="např. A, Zámeček"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Číslo pokoje *</label>
-          <input
-            name="roomNumber"
-            required
-            defaultValue={patient?.roomNumber}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="např. 12"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Datum příjezdu *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Datum příjezdu {!isEdit && '*'}
+          </label>
           <input
             name="arrivalDate"
             type="date"
-            required
-            defaultValue={patient ? formatDateParam(new Date(patient.arrivalDate)) : ""}
+            required={!isEdit}
+            defaultValue={stay ? formatDateParam(new Date(stay.arrivalDate)) : ''}
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Datum odjezdu *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Datum odjezdu {!isEdit && '*'}
+          </label>
           <input
             name="departureDate"
             type="date"
-            required
-            defaultValue={patient ? formatDateParam(new Date(patient.departureDate)) : ""}
+            required={!isEdit}
+            defaultValue={stay ? formatDateParam(new Date(stay.departureDate)) : ''}
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -112,7 +98,7 @@ export function PatientForm({ patient }: Props) {
         <textarea
           name="note"
           rows={2}
-          defaultValue={patient?.note ?? ""}
+          defaultValue={patient?.note ?? ''}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           placeholder="Alergie, omezení, speciální požadavky..."
         />
@@ -144,10 +130,10 @@ export function PatientForm({ patient }: Props) {
             disabled={isPending}
             className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {isPending ? "Ukládám..." : isEdit ? "Uložit změny" : "Přidat pacienta"}
+            {isPending ? 'Ukládám...' : isEdit ? 'Uložit změny' : 'Přidat pacienta'}
           </button>
         </div>
       </div>
     </form>
-  );
+  )
 }

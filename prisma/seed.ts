@@ -36,13 +36,6 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   auditor: ['audit.read'],
 }
 
-function weekDate(offsetDays: number): Date {
-  const monday = startOfWeek(new Date(), { weekStartsOn: 1 })
-  const d = addDays(monday, offsetDays)
-  d.setUTCHours(0, 0, 0, 0)
-  return d
-}
-
 const ROLE_NAMES: Record<string, string> = {
   admin: 'Správce',
   lekar: 'Lékař',
@@ -51,8 +44,14 @@ const ROLE_NAMES: Record<string, string> = {
   auditor: 'Auditor',
 }
 
+function weekDate(offsetDays: number): Date {
+  const monday = startOfWeek(new Date(), { weekStartsOn: 1 })
+  const d = addDays(monday, offsetDays)
+  d.setUTCHours(0, 0, 0, 0)
+  return d
+}
+
 async function seedUsers() {
-  // Seed all 5 roles with their permissions
   const roleMap: Record<string, string> = {}
   for (const [key, actions] of Object.entries(ROLE_PERMISSIONS)) {
     const role = await prisma.role.upsert({
@@ -61,8 +60,6 @@ async function seedUsers() {
       create: { key, name: ROLE_NAMES[key] ?? key },
     })
     roleMap[key] = role.id
-
-    // Sync permissions: delete old, create new
     await prisma.permission.deleteMany({ where: { roleId: role.id } })
     await prisma.permission.createMany({
       data: actions.map((action) => ({ roleId: role.id, action })),
@@ -88,7 +85,6 @@ async function seedUsers() {
     create: { email: adminEmail, passwordHash: adminHash, fullName: 'Správce Zařízení' },
   })
 
-  // Assign roles (upsert to be idempotent)
   await prisma.userRole.upsert({
     where: { userId_roleId: { userId: operator.id, roleId: roleMap.recepcni } },
     update: {},
@@ -108,11 +104,58 @@ async function main() {
   await seedUsers()
 
   await prisma.procedureSchedule.deleteMany()
+  await prisma.stay.deleteMany()
   await prisma.therapistAvailability.deleteMany()
+  await prisma.therapistTimeOff.deleteMany()
   await prisma.therapist.deleteMany()
   await prisma.patient.deleteMany()
   await prisma.procedure.deleteMany()
+  await prisma.room.deleteMany()
+  await prisma.building.deleteMany()
 
+  // Buildings & rooms
+  const buildingA = await prisma.building.create({
+    data: { code: 'A', name: 'Budova A' },
+  })
+  const buildingB = await prisma.building.create({
+    data: { code: 'B', name: 'Budova B' },
+  })
+
+  const rooms = await Promise.all([
+    prisma.room.create({
+      data: { buildingId: buildingA.id, number: '4', floor: 1, kind: 'patient_room' },
+    }),
+    prisma.room.create({
+      data: { buildingId: buildingA.id, number: '7', floor: 1, kind: 'patient_room' },
+    }),
+    prisma.room.create({
+      data: { buildingId: buildingA.id, number: '12', floor: 2, kind: 'patient_room' },
+    }),
+    prisma.room.create({
+      data: { buildingId: buildingB.id, number: '23', floor: 1, kind: 'patient_room' },
+    }),
+    prisma.room.create({
+      data: {
+        buildingId: buildingB.id,
+        number: 'M1',
+        floor: 0,
+        kind: 'procedure_room',
+        capacity: 2,
+      },
+    }),
+    prisma.room.create({
+      data: {
+        buildingId: buildingB.id,
+        number: 'M2',
+        floor: 0,
+        kind: 'procedure_room',
+        capacity: 1,
+      },
+    }),
+  ])
+  // rooms[0]=A/4, [1]=A/7, [2]=A/12, [3]=B/23, [4]=B/M1(proc), [5]=B/M2(proc)
+
+  // Therapists
   const therapists = await Promise.all([
     prisma.therapist.create({
       data: {
@@ -161,46 +204,61 @@ async function main() {
     }),
   ])
 
+  // Patients (no stay fields)
   const patients = await Promise.all([
     prisma.patient.create({
+      data: { firstName: 'František', lastName: 'Novák', note: 'Alergie na latex' },
+    }),
+    prisma.patient.create({ data: { firstName: 'Jana', lastName: 'Svobodová' } }),
+    prisma.patient.create({ data: { firstName: 'Tomáš', lastName: 'Kratochvíl' } }),
+    prisma.patient.create({ data: { firstName: 'Marie', lastName: 'Bílá' } }),
+  ])
+
+  // Stays — one per patient
+  const stays = await Promise.all([
+    prisma.stay.create({
       data: {
-        firstName: 'František',
-        lastName: 'Novák',
-        roomNumber: '12',
+        code: '2026-0001',
+        patientId: patients[0].id,
+        roomId: rooms[2].id, // A/12
         arrivalDate: weekDate(-7),
         departureDate: weekDate(7),
-        note: 'Alergie na latex',
+        status: 'checked_in',
       },
     }),
-    prisma.patient.create({
+    prisma.stay.create({
       data: {
-        firstName: 'Jana',
-        lastName: 'Svobodová',
-        roomNumber: '7',
+        code: '2026-0002',
+        patientId: patients[1].id,
+        roomId: rooms[1].id, // A/7
         arrivalDate: weekDate(-3),
         departureDate: weekDate(11),
+        status: 'checked_in',
       },
     }),
-    prisma.patient.create({
+    prisma.stay.create({
       data: {
-        firstName: 'Tomáš',
-        lastName: 'Kratochvíl',
-        roomNumber: '23',
+        code: '2026-0003',
+        patientId: patients[2].id,
+        roomId: rooms[3].id, // B/23
         arrivalDate: weekDate(-5),
         departureDate: weekDate(9),
+        status: 'checked_in',
       },
     }),
-    prisma.patient.create({
+    prisma.stay.create({
       data: {
-        firstName: 'Marie',
-        lastName: 'Bílá',
-        roomNumber: '4',
+        code: '2026-0004',
+        patientId: patients[3].id,
+        roomId: rooms[0].id, // A/4
         arrivalDate: weekDate(0),
         departureDate: weekDate(14),
+        status: 'planned',
       },
     }),
   ])
 
+  // Procedures
   const procedures = await Promise.all([
     prisma.procedure.create({
       data: { name: 'Klasická masáž', category: 'masaz', durationMin: 60 },
@@ -222,26 +280,29 @@ async function main() {
     }),
   ])
 
-  const schedules = [
-    { patientIdx: 0, procedureIdx: 0, therapistIdx: 0, dayOffset: 0, start: '08:00', end: '09:00' },
-    { patientIdx: 0, procedureIdx: 3, therapistIdx: 1, dayOffset: 1, start: '09:00', end: '09:20' },
-    { patientIdx: 0, procedureIdx: 2, therapistIdx: 2, dayOffset: 2, start: '10:00', end: '10:30' },
-    { patientIdx: 0, procedureIdx: 0, therapistIdx: 0, dayOffset: 3, start: '08:00', end: '09:00' },
-    { patientIdx: 1, procedureIdx: 1, therapistIdx: 1, dayOffset: 0, start: '09:30', end: '09:50' },
-    { patientIdx: 1, procedureIdx: 4, therapistIdx: 2, dayOffset: 1, start: '11:00', end: '11:45' },
-    { patientIdx: 1, procedureIdx: 3, therapistIdx: 0, dayOffset: 3, start: '10:00', end: '10:20' },
-    { patientIdx: 2, procedureIdx: 2, therapistIdx: 2, dayOffset: 0, start: '11:00', end: '11:30' },
-    { patientIdx: 2, procedureIdx: 0, therapistIdx: 1, dayOffset: 2, start: '08:00', end: '09:00' },
-    { patientIdx: 3, procedureIdx: 5, therapistIdx: 0, dayOffset: 1, start: '14:00', end: '14:30' },
-    { patientIdx: 3, procedureIdx: 3, therapistIdx: 2, dayOffset: 4, start: '09:00', end: '09:20' },
+  // Schedules — now require stayId
+  const scheduleData = [
+    { pIdx: 0, sIdx: 0, procIdx: 0, tIdx: 0, rIdx: 4, dayOffset: 0, start: '08:00', end: '09:00' },
+    { pIdx: 0, sIdx: 0, procIdx: 3, tIdx: 1, rIdx: 5, dayOffset: 1, start: '09:00', end: '09:20' },
+    { pIdx: 0, sIdx: 0, procIdx: 2, tIdx: 2, rIdx: 4, dayOffset: 2, start: '10:00', end: '10:30' },
+    { pIdx: 0, sIdx: 0, procIdx: 0, tIdx: 0, rIdx: 4, dayOffset: 3, start: '08:00', end: '09:00' },
+    { pIdx: 1, sIdx: 1, procIdx: 1, tIdx: 1, rIdx: 5, dayOffset: 0, start: '09:30', end: '09:50' },
+    { pIdx: 1, sIdx: 1, procIdx: 4, tIdx: 2, rIdx: 4, dayOffset: 1, start: '11:00', end: '11:45' },
+    { pIdx: 1, sIdx: 1, procIdx: 3, tIdx: 0, rIdx: 5, dayOffset: 3, start: '10:00', end: '10:20' },
+    { pIdx: 2, sIdx: 2, procIdx: 2, tIdx: 2, rIdx: 4, dayOffset: 0, start: '11:00', end: '11:30' },
+    { pIdx: 2, sIdx: 2, procIdx: 0, tIdx: 1, rIdx: 5, dayOffset: 2, start: '08:00', end: '09:00' },
+    { pIdx: 3, sIdx: 3, procIdx: 5, tIdx: 0, rIdx: 4, dayOffset: 1, start: '14:00', end: '14:30' },
+    { pIdx: 3, sIdx: 3, procIdx: 3, tIdx: 2, rIdx: 5, dayOffset: 4, start: '09:00', end: '09:20' },
   ]
 
-  for (const s of schedules) {
+  for (const s of scheduleData) {
     await prisma.procedureSchedule.create({
       data: {
-        patientId: patients[s.patientIdx].id,
-        procedureId: procedures[s.procedureIdx].id,
-        therapistId: therapists[s.therapistIdx].id,
+        stayId: stays[s.sIdx].id,
+        patientId: patients[s.pIdx].id,
+        procedureId: procedures[s.procIdx].id,
+        therapistId: therapists[s.tIdx].id,
+        procedureRoomId: rooms[s.rIdx].id,
         date: weekDate(s.dayOffset),
         startTime: s.start,
         endTime: s.end,

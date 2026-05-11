@@ -57,7 +57,7 @@ export async function createProcedure(formData: FormData) {
   return { success: true }
 }
 
-export async function updateProcedure(id: number, formData: FormData) {
+export async function updateProcedure(id: string, formData: FormData) {
   const deny = await checkPermission('procedure.write')
   if (deny) return deny
 
@@ -87,7 +87,7 @@ export async function updateProcedure(id: number, formData: FormData) {
   return { success: true }
 }
 
-export async function toggleProcedureActive(id: number) {
+export async function toggleProcedureActive(id: string) {
   const deny = await checkPermission('procedure.write')
   if (deny) return
 

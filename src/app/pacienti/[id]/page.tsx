@@ -1,41 +1,44 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { getPatient } from "@/actions/patientActions";
-import { getPatientWeekSchedules } from "@/actions/scheduleActions";
-import { getTherapists } from "@/actions/therapistActions";
-import { getProcedures } from "@/actions/procedureActions";
-import { getPatients } from "@/actions/patientActions";
-import { WeeklyGrid } from "@/components/scheduling/WeeklyGrid";
-import { WeekSelector } from "@/components/scheduling/WeekSelector";
-import { getWeekDays, parseWeekParam, formatCzechFull } from "@/lib/dateUtils";
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { getPatient } from '@/actions/patientActions'
+import { getPatientWeekSchedules } from '@/actions/scheduleActions'
+import { getTherapists } from '@/actions/therapistActions'
+import { getProcedures } from '@/actions/procedureActions'
+import { getPatients } from '@/actions/patientActions'
+import { WeeklyGrid } from '@/components/scheduling/WeeklyGrid'
+import { WeekSelector } from '@/components/scheduling/WeekSelector'
+import { getWeekDays, parseWeekParam, formatCzechFull } from '@/lib/dateUtils'
 
 export default async function PacientDetailPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tyden?: string }>;
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ tyden?: string }>
 }) {
-  const { id } = await params;
-  const { tyden } = await searchParams;
+  const { id } = await params
+  const { tyden } = await searchParams
 
-  const patient = await getPatient(Number(id));
-  if (!patient) notFound();
+  const patient = await getPatient(id)
+  if (!patient) notFound()
 
-  const weekStart = parseWeekParam(tyden ?? null);
-  const weekDays = getWeekDays(weekStart);
+  const stay = patient.stays[0]
+  const weekStart = parseWeekParam(tyden ?? null)
+  const weekDays = getWeekDays(weekStart)
 
   const [schedules, therapists, procedures, patients] = await Promise.all([
     getPatientWeekSchedules(patient.id, weekStart),
     getTherapists(),
     getProcedures(),
     getPatients(),
-  ]);
+  ])
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-2">
-        <Link href="/pacienti" className="text-gray-400 hover:text-gray-600 text-sm">← Zpět</Link>
+        <Link href="/pacienti" className="text-gray-400 hover:text-gray-600 text-sm">
+          ← Zpět
+        </Link>
       </div>
 
       <div className="flex items-start justify-between mb-6">
@@ -43,9 +46,18 @@ export default async function PacientDetailPage({
           <h1 className="text-2xl font-bold text-gray-900">
             {patient.lastName} {patient.firstName}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {patient.building ? `${patient.building} · ` : ""}Pokoj {patient.roomNumber} · Pobyt: {formatCzechFull(new Date(patient.arrivalDate))} – {formatCzechFull(new Date(patient.departureDate))}
-          </p>
+          {stay && (
+            <p className="text-gray-500 text-sm mt-1">
+              Pobyt: {formatCzechFull(new Date(stay.arrivalDate))} –{' '}
+              {formatCzechFull(new Date(stay.departureDate))}
+              {stay.room && (
+                <>
+                  {' '}
+                  · {stay.room.building?.name ?? ''} pokoj {stay.room.number}
+                </>
+              )}
+            </p>
+          )}
           {patient.note && (
             <p className="text-amber-700 text-sm mt-1 bg-amber-50 px-3 py-1 rounded-lg inline-block">
               📋 {patient.note}
@@ -88,5 +100,5 @@ export default async function PacientDetailPage({
         filterPatientId={patient.id}
       />
     </div>
-  );
+  )
 }

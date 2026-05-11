@@ -1,38 +1,51 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { getPatient } from "@/actions/patientActions";
-import { getPatientStaySchedules } from "@/actions/scheduleActions";
-import { getTherapists } from "@/actions/therapistActions";
-import { getProcedures } from "@/actions/procedureActions";
-import { getPatients } from "@/actions/patientActions";
-import { StayPlanningView } from "@/components/scheduling/StayPlanningView";
-import { formatCzechFull } from "@/lib/dateUtils";
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { getPatient } from '@/actions/patientActions'
+import { getPatientStaySchedules } from '@/actions/scheduleActions'
+import { getTherapists } from '@/actions/therapistActions'
+import { getProcedures } from '@/actions/procedureActions'
+import { getPatients } from '@/actions/patientActions'
+import { StayPlanningView } from '@/components/scheduling/StayPlanningView'
+import { formatCzechFull } from '@/lib/dateUtils'
 
-export default async function PobytPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const patient = await getPatient(Number(id));
-  if (!patient) notFound();
+export default async function PobytPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const patient = await getPatient(id)
+  if (!patient) notFound()
 
-  const from = new Date(patient.arrivalDate);
-  const to = new Date(patient.departureDate);
+  const stay = patient.stays[0]
+  if (!stay) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-2">
+          <Link href={`/pacienti/${id}`} className="text-gray-400 hover:text-gray-600 text-sm">
+            ← Zpět na pacienta
+          </Link>
+        </div>
+        <p className="text-gray-500 mt-4">Pacient nemá žádný aktivní pobyt.</p>
+      </div>
+    )
+  }
+
+  const from = new Date(stay.arrivalDate)
+  const to = new Date(stay.departureDate)
 
   const [schedules, therapists, procedures, patients] = await Promise.all([
     getPatientStaySchedules(patient.id, from, to),
     getTherapists(),
     getProcedures(),
     getPatients(),
-  ]);
+  ])
 
-  const stayDays = Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const stayDays = Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-2">
-        <Link href={`/pacienti/${patient.id}`} className="text-gray-400 hover:text-gray-600 text-sm">
+        <Link
+          href={`/pacienti/${patient.id}`}
+          className="text-gray-400 hover:text-gray-600 text-sm"
+        >
           ← Zpět na pacienta
         </Link>
       </div>
@@ -43,7 +56,7 @@ export default async function PobytPage({
             {patient.lastName} {patient.firstName}
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Pokoj {patient.roomNumber} · Pobyt: {formatCzechFull(from)} – {formatCzechFull(to)} ({stayDays} dní)
+            Pobyt: {formatCzechFull(from)} – {formatCzechFull(to)} ({stayDays} dní)
           </p>
         </div>
         <Link
@@ -60,11 +73,12 @@ export default async function PobytPage({
 
       <StayPlanningView
         patient={patient}
+        stay={stay}
         schedules={schedules}
         therapists={therapists}
         procedures={procedures}
         patients={patients}
       />
     </div>
-  );
+  )
 }

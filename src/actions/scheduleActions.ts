@@ -9,13 +9,14 @@ import { writeAuditLog } from '@/modules/core/audit/auditLogger'
 import { checkPermission } from '@/modules/core/rbac'
 
 const ScheduleSchema = z.object({
-  patientId: z.coerce.number().int().positive(),
-  procedureId: z.coerce.number().int().positive(),
-  therapistId: z.coerce.number().int().positive(),
+  patientId: z.string().min(1, 'Pacient je povinný'),
+  procedureId: z.string().min(1, 'Procedura je povinná'),
+  therapistId: z.string().min(1, 'Terapeut je povinný'),
   date: z.string().min(1, 'Datum je povinné'),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Neplatný čas'),
   durationMin: z.coerce.number().int().positive(),
   note: z.string().optional(),
+  status: z.string().optional(),
 })
 
 function revalidateAll() {
@@ -30,31 +31,31 @@ export async function getWeekSchedules(weekStart: Date) {
   weekEnd.setUTCHours(23, 59, 59, 999)
 
   return prisma.procedureSchedule.findMany({
-    where: { date: { gte: weekStart, lte: weekEnd } },
+    where: { date: { gte: weekStart, lte: weekEnd }, deletedAt: null },
     include: { patient: true, procedure: true, therapist: true },
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   })
 }
 
-export async function getPatientWeekSchedules(patientId: number, weekStart: Date) {
+export async function getPatientWeekSchedules(patientId: string, weekStart: Date) {
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekEnd.getDate() + 6)
   weekEnd.setUTCHours(23, 59, 59, 999)
 
   return prisma.procedureSchedule.findMany({
-    where: { patientId, date: { gte: weekStart, lte: weekEnd } },
+    where: { patientId, date: { gte: weekStart, lte: weekEnd }, deletedAt: null },
     include: { patient: true, procedure: true, therapist: true },
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   })
 }
 
-export async function getTherapistWeekSchedules(therapistId: number, weekStart: Date) {
+export async function getTherapistWeekSchedules(therapistId: string, weekStart: Date) {
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekEnd.getDate() + 6)
   weekEnd.setUTCHours(23, 59, 59, 999)
 
   return prisma.procedureSchedule.findMany({
-    where: { therapistId, date: { gte: weekStart, lte: weekEnd } },
+    where: { therapistId, date: { gte: weekStart, lte: weekEnd }, deletedAt: null },
     include: { patient: true, procedure: true, therapist: true },
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   })
@@ -73,6 +74,12 @@ export async function createSchedule(formData: FormData) {
   const dateObj = new Date(date)
   dateObj.setUTCHours(0, 0, 0, 0)
 
+  const activeStay = await prisma.stay.findFirst({
+    where: { patientId, deletedAt: null },
+    orderBy: { arrivalDate: 'desc' },
+  })
+  if (!activeStay) return { success: false, error: 'Pacient nemá aktivní pobyt' }
+
   const conflicts = await findConflicts({
     therapistId,
     patientId,
@@ -86,6 +93,7 @@ export async function createSchedule(formData: FormData) {
 
   const schedule = await prisma.procedureSchedule.create({
     data: {
+      stayId: activeStay.id,
       patientId,
       procedureId,
       therapistId,
@@ -105,7 +113,7 @@ export async function createSchedule(formData: FormData) {
   return { success: true }
 }
 
-export async function updateSchedule(id: number, formData: FormData) {
+export async function updateSchedule(id: string, formData: FormData) {
   const deny = await checkPermission('schedule.write')
   if (deny) return deny
 
@@ -113,7 +121,8 @@ export async function updateSchedule(id: number, formData: FormData) {
   const parsed = ScheduleSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { patientId, procedureId, therapistId, date, startTime, durationMin, note } = parsed.data
+  const { patientId, procedureId, therapistId, date, startTime, durationMin, note, status } =
+    parsed.data
   const endTime = addMinutes(startTime, durationMin)
   const dateObj = new Date(date)
   dateObj.setUTCHours(0, 0, 0, 0)
@@ -140,6 +149,7 @@ export async function updateSchedule(id: number, formData: FormData) {
       startTime,
       endTime,
       note: note || null,
+      ...(status ? { status } : {}),
     },
   })
   await writeAuditLog({
@@ -152,7 +162,7 @@ export async function updateSchedule(id: number, formData: FormData) {
   return { success: true }
 }
 
-export async function updateScheduleStatus(id: number, status: string) {
+export async function updateScheduleStatus(id: string, status: string) {
   const deny = await checkPermission('schedule.status')
   if (deny) return deny
 
@@ -167,7 +177,7 @@ export async function updateScheduleStatus(id: number, status: string) {
   return { success: true }
 }
 
-export async function deleteSchedule(id: number) {
+export async function deleteSchedule(id: string) {
   const deny = await checkPermission('schedule.delete')
   if (deny) return deny
 
@@ -177,23 +187,23 @@ export async function deleteSchedule(id: number) {
   return { success: true }
 }
 
-export async function getPatientStaySchedules(patientId: number, from: Date, to: Date) {
+export async function getPatientStaySchedules(patientId: string, from: Date, to: Date) {
   const dayStart = new Date(from)
   dayStart.setUTCHours(0, 0, 0, 0)
   const dayEnd = new Date(to)
   dayEnd.setUTCHours(23, 59, 59, 999)
 
   return prisma.procedureSchedule.findMany({
-    where: { patientId, date: { gte: dayStart, lte: dayEnd } },
+    where: { patientId, date: { gte: dayStart, lte: dayEnd }, deletedAt: null },
     include: { patient: true, procedure: true, therapist: true },
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   })
 }
 
 const RecurringSchema = z.object({
-  patientId: z.number().int().positive(),
-  procedureId: z.number().int().positive(),
-  therapistId: z.number().int().positive(),
+  patientId: z.string().min(1),
+  procedureId: z.string().min(1),
+  therapistId: z.string().min(1),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1),
   from: z.string().min(1),
@@ -202,9 +212,9 @@ const RecurringSchema = z.object({
 })
 
 export async function checkRecurringConflicts(data: {
-  patientId: number
-  therapistId: number
-  procedureId: number
+  patientId: string
+  therapistId: string
+  procedureId: string
   startTime: string
   daysOfWeek: number[]
   from: string
@@ -243,9 +253,9 @@ export async function checkRecurringConflicts(data: {
 }
 
 export async function createRecurringSchedules(data: {
-  patientId: number
-  procedureId: number
-  therapistId: number
+  patientId: string
+  procedureId: string
+  therapistId: string
   startTime: string
   daysOfWeek: number[]
   from: string
@@ -264,12 +274,20 @@ export async function createRecurringSchedules(data: {
   const procedure = await prisma.procedure.findUnique({ where: { id: procedureId } })
   if (!procedure) return { success: false, created: 0, skipped: 0, error: 'Procedura nenalezena' }
 
+  const activeStay = await prisma.stay.findFirst({
+    where: { patientId, deletedAt: null },
+    orderBy: { arrivalDate: 'desc' },
+  })
+  if (!activeStay)
+    return { success: false, created: 0, skipped: 0, error: 'Pacient nemá aktivní pobyt' }
+
   const endTime = addMinutes(startTime, procedure.durationMin)
 
   const toCreate: {
-    patientId: number
-    procedureId: number
-    therapistId: number
+    stayId: string
+    patientId: string
+    procedureId: string
+    therapistId: string
     date: Date
     startTime: string
     endTime: string
@@ -295,6 +313,7 @@ export async function createRecurringSchedules(data: {
         skipped++
       } else {
         toCreate.push({
+          stayId: activeStay.id,
           patientId,
           procedureId,
           therapistId,
@@ -324,7 +343,7 @@ export async function getDaySchedules(date: Date) {
   dayEnd.setUTCHours(23, 59, 59, 999)
 
   return prisma.procedureSchedule.findMany({
-    where: { date: { gte: dayStart, lte: dayEnd }, status: { not: 'cancelled' } },
+    where: { date: { gte: dayStart, lte: dayEnd }, status: { not: 'cancelled' }, deletedAt: null },
     include: { patient: true, procedure: true, therapist: true },
     orderBy: [{ therapistId: 'asc' }, { startTime: 'asc' }],
   })

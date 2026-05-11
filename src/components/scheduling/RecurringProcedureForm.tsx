@@ -1,100 +1,110 @@
-"use client";
+'use client'
 
-import { useState, useTransition } from "react";
-import { checkRecurringConflicts, createRecurringSchedules } from "@/actions/scheduleActions";
-import { CATEGORIES, DAY_NAMES, START_TIMES } from "@/lib/constants";
-import { formatDateParam, formatCzechFull } from "@/lib/dateUtils";
-import type { Patient, Therapist, Procedure } from "@prisma/client";
+import { useState, useTransition } from 'react'
+import { checkRecurringConflicts, createRecurringSchedules } from '@/actions/scheduleActions'
+import { CATEGORIES, DAY_NAMES, START_TIMES } from '@/lib/constants'
+import { formatDateParam, formatCzechFull } from '@/lib/dateUtils'
+import type { Patient, Stay, Therapist, Procedure } from '@prisma/client'
 
-type PreviewEntry = { date: string; hasConflict: boolean; conflictMessage?: string };
+type PreviewEntry = { date: string; hasConflict: boolean; conflictMessage?: string }
 
 interface Props {
-  patient: Patient;
-  procedures: Procedure[];
-  therapists: Therapist[];
-  onClose: () => void;
-  onSuccess: () => void;
+  patient: Patient
+  stay: Stay
+  procedures: Procedure[]
+  therapists: Therapist[]
+  onClose: () => void
+  onSuccess: () => void
 }
 
-const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 
-export function RecurringProcedureForm({ patient, procedures, therapists, onClose, onSuccess }: Props) {
-  const [procedureId, setProcedureId] = useState("");
-  const [therapistId, setTherapistId] = useState("");
-  const [startTime, setStartTime] = useState("08:00");
-  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [previewData, setPreviewData] = useState<PreviewEntry[] | null>(null);
-  const [isChecking, setIsChecking] = useState(false);
-  const [submitResult, setSubmitResult] = useState<{ created: number; skipped: number } | null>(null);
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+export function RecurringProcedureForm({
+  patient,
+  stay,
+  procedures,
+  therapists,
+  onClose,
+  onSuccess,
+}: Props) {
+  const [procedureId, setProcedureId] = useState('')
+  const [therapistId, setTherapistId] = useState('')
+  const [startTime, setStartTime] = useState('08:00')
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5])
+  const [previewData, setPreviewData] = useState<PreviewEntry[] | null>(null)
+  const [isChecking, setIsChecking] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{ created: number; skipped: number } | null>(
+    null
+  )
+  const [error, setError] = useState('')
+  const [isPending, startTransition] = useTransition()
 
-  const from = new Date(patient.arrivalDate);
-  from.setUTCHours(0, 0, 0, 0);
-  const to = new Date(patient.departureDate);
-  to.setUTCHours(0, 0, 0, 0);
+  const from = new Date(stay.arrivalDate)
+  from.setUTCHours(0, 0, 0, 0)
+  const to = new Date(stay.departureDate)
+  to.setUTCHours(0, 0, 0, 0)
 
-  const grouped = Object.entries(CATEGORIES).map(([key, label]) => ({
-    label,
-    items: procedures.filter((p) => p.category === key),
-  })).filter((g) => g.items.length > 0);
+  const grouped = Object.entries(CATEGORIES)
+    .map(([key, label]) => ({
+      label,
+      items: procedures.filter((p) => p.category === key),
+    }))
+    .filter((g) => g.items.length > 0)
 
   function toggleDay(day: number) {
-    setDaysOfWeek((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
-    setPreviewData(null);
+    setDaysOfWeek((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]))
+    setPreviewData(null)
   }
 
   function resetPreview() {
-    setPreviewData(null);
+    setPreviewData(null)
   }
 
   async function handlePreview() {
-    if (!procedureId || !therapistId || daysOfWeek.length === 0) return;
-    setIsChecking(true);
-    setError("");
+    if (!procedureId || !therapistId || daysOfWeek.length === 0) return
+    setIsChecking(true)
+    setError('')
     try {
       const result = await checkRecurringConflicts({
         patientId: patient.id,
-        therapistId: Number(therapistId),
-        procedureId: Number(procedureId),
+        therapistId,
+        procedureId,
         startTime,
         daysOfWeek,
         from: formatDateParam(from),
         to: formatDateParam(to),
-      });
-      setPreviewData(result);
+      })
+      setPreviewData(result)
     } catch {
-      setError("Chyba při kontrole konfliktů");
+      setError('Chyba při kontrole konfliktů')
     } finally {
-      setIsChecking(false);
+      setIsChecking(false)
     }
   }
 
   function handleSubmit() {
-    setError("");
+    setError('')
     startTransition(async () => {
       const result = await createRecurringSchedules({
         patientId: patient.id,
-        procedureId: Number(procedureId),
-        therapistId: Number(therapistId),
+        procedureId,
+        therapistId,
         startTime,
         daysOfWeek,
         from: formatDateParam(from),
         to: formatDateParam(to),
-      });
+      })
       if (result.success) {
-        setSubmitResult({ created: result.created, skipped: result.skipped });
+        setSubmitResult({ created: result.created, skipped: result.skipped })
       } else {
-        setError(result.error ?? "Chyba při vytváření termínů");
+        setError(result.error ?? 'Chyba při vytváření termínů')
       }
-    });
+    })
   }
 
-  const nonConflictCount = previewData ? previewData.filter((e) => !e.hasConflict).length : 0;
-  const canPreview = !!procedureId && !!therapistId && daysOfWeek.length > 0;
-  const canSubmit = previewData !== null && nonConflictCount > 0 && !isPending;
+  const nonConflictCount = previewData ? previewData.filter((e) => !e.hasConflict).length : 0
+  const canPreview = !!procedureId && !!therapistId && daysOfWeek.length > 0
+  const canSubmit = previewData !== null && nonConflictCount > 0 && !isPending
 
   if (submitResult) {
     return (
@@ -103,7 +113,8 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
           <div className="text-4xl mb-4">✓</div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Hotovo!</h2>
           <p className="text-gray-600 mb-1">
-            Vytvořeno <span className="font-semibold text-green-700">{submitResult.created}</span> termínů
+            Vytvořeno <span className="font-semibold text-green-700">{submitResult.created}</span>{' '}
+            termínů
           </p>
           {submitResult.skipped > 0 && (
             <p className="text-sm text-amber-700 mb-4">
@@ -118,7 +129,7 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -126,7 +137,12 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
           <h2 className="font-semibold text-lg">Plán procedury — opakovaně</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
@@ -135,7 +151,10 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
             <select
               required
               value={procedureId}
-              onChange={(e) => { setProcedureId(e.target.value); resetPreview(); }}
+              onChange={(e) => {
+                setProcedureId(e.target.value)
+                resetPreview()
+              }}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">— vyberte proceduru —</option>
@@ -156,7 +175,10 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
             <select
               required
               value={therapistId}
-              onChange={(e) => { setTherapistId(e.target.value); resetPreview(); }}
+              onChange={(e) => {
+                setTherapistId(e.target.value)
+                resetPreview()
+              }}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">— vyberte terapeuta —</option>
@@ -172,11 +194,16 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
             <label className="block text-sm font-medium text-gray-700 mb-1">Čas začátku *</label>
             <select
               value={startTime}
-              onChange={(e) => { setStartTime(e.target.value); resetPreview(); }}
+              onChange={(e) => {
+                setStartTime(e.target.value)
+                resetPreview()
+              }}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {START_TIMES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           </div>
@@ -189,8 +216,8 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
                   key={day}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-sm transition-colors select-none ${
                     daysOfWeek.includes(day)
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-white border-gray-300 text-gray-700 hover:border-blue-400"
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400'
                   }`}
                 >
                   <input
@@ -215,7 +242,7 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
               disabled={!canPreview || isChecking}
               className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isChecking ? "Kontroluji konflikty..." : "Zobrazit náhled termínů →"}
+              {isChecking ? 'Kontroluji konflikty...' : 'Zobrazit náhled termínů →'}
             </button>
 
             {previewData !== null && (
@@ -228,23 +255,27 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
                   <>
                     <div className="px-4 py-2 bg-gray-50 border-b text-xs text-gray-500 flex justify-between">
                       <span>{nonConflictCount} volných</span>
-                      <span>{previewData.length - nonConflictCount} konfliktů (budou přeskočeny)</span>
+                      <span>
+                        {previewData.length - nonConflictCount} konfliktů (budou přeskočeny)
+                      </span>
                     </div>
                     <div className="max-h-48 overflow-y-auto divide-y">
                       {previewData.map((entry) => (
                         <div
                           key={entry.date}
                           className={`flex items-start gap-3 px-4 py-2 text-sm ${
-                            entry.hasConflict ? "bg-amber-50" : "bg-white"
+                            entry.hasConflict ? 'bg-amber-50' : 'bg-white'
                           }`}
                         >
-                          <span className="shrink-0 mt-0.5">
-                            {entry.hasConflict ? "⚠" : "✓"}
-                          </span>
-                          <span className={`flex-1 ${entry.hasConflict ? "text-amber-800" : "text-gray-700"}`}>
-                            {formatCzechFull(new Date(entry.date + "T00:00:00"))}
+                          <span className="shrink-0 mt-0.5">{entry.hasConflict ? '⚠' : '✓'}</span>
+                          <span
+                            className={`flex-1 ${entry.hasConflict ? 'text-amber-800' : 'text-gray-700'}`}
+                          >
+                            {formatCzechFull(new Date(entry.date + 'T00:00:00'))}
                             {entry.hasConflict && entry.conflictMessage && (
-                              <span className="block text-xs text-amber-600 mt-0.5">{entry.conflictMessage}</span>
+                              <span className="block text-xs text-amber-600 mt-0.5">
+                                {entry.conflictMessage}
+                              </span>
                             )}
                           </span>
                         </div>
@@ -274,15 +305,15 @@ export function RecurringProcedureForm({ patient, procedures, therapists, onClos
             className="px-5 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isPending
-              ? "Vytvářím..."
+              ? 'Vytvářím...'
               : previewData === null
-              ? "Nejprve zobrazit náhled"
-              : nonConflictCount === 0
-              ? "Žádné volné termíny"
-              : `Vytvořit ${nonConflictCount} termínů`}
+                ? 'Nejprve zobrazit náhled'
+                : nonConflictCount === 0
+                  ? 'Žádné volné termíny'
+                  : `Vytvořit ${nonConflictCount} termínů`}
           </button>
         </div>
       </div>
     </div>
-  );
+  )
 }

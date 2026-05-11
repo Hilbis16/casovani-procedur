@@ -1,27 +1,24 @@
-import Link from "next/link";
-import { addDays, parseISO } from "date-fns";
-import { getDaySchedules } from "@/actions/scheduleActions";
-import { getTherapists } from "@/actions/therapistActions";
-import { PrintButton } from "@/components/print/PrintButton";
-import { formatCzechFull, formatDateParam } from "@/lib/dateUtils";
+import Link from 'next/link'
+import { addDays, parseISO } from 'date-fns'
+import { getDaySchedules } from '@/actions/scheduleActions'
+import { getTherapists } from '@/actions/therapistActions'
+import { PrintButton } from '@/components/print/PrintButton'
+import { formatCzechFull, formatDateParam } from '@/lib/dateUtils'
 
 export default async function PrehledPage({
   searchParams,
 }: {
-  searchParams: Promise<{ datum?: string }>;
+  searchParams: Promise<{ datum?: string }>
 }) {
-  const { datum } = await searchParams;
+  const { datum } = await searchParams
 
-  const date = datum ? parseISO(datum) : new Date();
-  date.setUTCHours(0, 0, 0, 0);
+  const date = datum ? parseISO(datum) : new Date()
+  date.setUTCHours(0, 0, 0, 0)
 
-  const [schedules, therapists] = await Promise.all([
-    getDaySchedules(date),
-    getTherapists(),
-  ]);
+  const [schedules, therapists] = await Promise.all([getDaySchedules(date), getTherapists()])
 
-  const prevDay = formatDateParam(addDays(date, -1));
-  const nextDay = formatDateParam(addDays(date, 1));
+  const prevDay = formatDateParam(addDays(date, -1))
+  const nextDay = formatDateParam(addDays(date, 1))
 
   const byTherapist = therapists
     .map((t) => ({
@@ -30,7 +27,7 @@ export default async function PrehledPage({
         .filter((s) => s.therapistId === t.id)
         .sort((a, b) => a.startTime.localeCompare(b.startTime)),
     }))
-    .filter((t) => t.schedules.length > 0);
+    .filter((t) => t.schedules.length > 0)
 
   return (
     <div>
@@ -75,7 +72,8 @@ export default async function PrehledPage({
               >
                 {therapist.lastName} {therapist.firstName}
                 <span className="ml-2 font-normal opacity-80 text-xs">
-                  ({ts.length} {ts.length === 1 ? "pacient" : ts.length < 5 ? "pacienti" : "pacientů"})
+                  ({ts.length}{' '}
+                  {ts.length === 1 ? 'pacient' : ts.length < 5 ? 'pacienti' : 'pacientů'})
                 </span>
               </div>
               <table className="w-full text-sm">
@@ -100,10 +98,7 @@ export default async function PrehledPage({
                 </thead>
                 <tbody>
                   {ts.map((s, i) => (
-                    <tr
-                      key={s.id}
-                      className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}
-                    >
+                    <tr key={s.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                       <td className="px-4 py-2.5 font-mono text-xs font-semibold">
                         {s.startTime} – {s.endTime}
                       </td>
@@ -111,9 +106,9 @@ export default async function PrehledPage({
                       <td className="px-4 py-2.5">
                         {s.patient.lastName} {s.patient.firstName}
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600">{s.patient.roomNumber}</td>
+                      <td className="px-4 py-2.5 text-gray-600">—</td>
                       <td className="px-4 py-2.5 text-gray-400 text-xs print:hidden">
-                        {s.note ?? "—"}
+                        {s.note ?? '—'}
                       </td>
                     </tr>
                   ))}
@@ -124,5 +119,5 @@ export default async function PrehledPage({
         </div>
       )}
     </div>
-  );
+  )
 }

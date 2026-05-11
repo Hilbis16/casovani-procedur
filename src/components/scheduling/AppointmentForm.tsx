@@ -12,13 +12,21 @@ type FullSchedule = ProcedureSchedule & {
   procedure: Procedure
 }
 
+const STATUS_OPTIONS = [
+  { value: 'planned', label: 'Naplánováno' },
+  { value: 'confirmed', label: 'Potvrzeno' },
+  { value: 'completed', label: 'Absolvováno' },
+  { value: 'cancelled', label: 'Zrušeno' },
+  { value: 'no_show', label: 'Nedostavil se' },
+]
+
 interface Props {
   patients: Patient[]
   therapists: Therapist[]
   procedures: Procedure[]
   initialDate?: Date
   initialStartTime?: string
-  initialPatientId?: number
+  initialPatientId?: string
   schedule?: FullSchedule
   onClose: () => void
   onSuccess: () => void
@@ -42,11 +50,9 @@ export function AppointmentForm({
 }: Props) {
   const isEdit = !!schedule
 
-  const [patientId, setPatientId] = useState(
-    schedule?.patientId?.toString() ?? initialPatientId?.toString() ?? ''
-  )
-  const [procedureId, setProcedureId] = useState(schedule?.procedureId?.toString() ?? '')
-  const [therapistId, setTherapistId] = useState(schedule?.therapistId?.toString() ?? '')
+  const [patientId, setPatientId] = useState(schedule?.patientId ?? initialPatientId ?? '')
+  const [procedureId, setProcedureId] = useState(schedule?.procedureId ?? '')
+  const [therapistId, setTherapistId] = useState(schedule?.therapistId ?? '')
   const [date, setDate] = useState(
     schedule
       ? formatDateParam(new Date(schedule.date))
@@ -55,13 +61,14 @@ export function AppointmentForm({
         : ''
   )
   const [startTime, setStartTime] = useState(schedule?.startTime ?? initialStartTime ?? '08:00')
+  const [status, setStatus] = useState(schedule?.status ?? 'planned')
   const [note, setNote] = useState(schedule?.note ?? '')
   const [conflicts, setConflicts] = useState<Conflict[]>([])
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const selectedProcedure = procedures.find((p) => p.id.toString() === procedureId)
+  const selectedProcedure = procedures.find((p) => p.id === procedureId)
   const durationMin = selectedProcedure?.durationMin ?? 0
   const endTime = durationMin ? addMinutes(startTime, durationMin) : ''
 
@@ -78,7 +85,7 @@ export function AppointmentForm({
         date,
         startTime,
         durationMin: durationMin.toString(),
-        ...(isEdit ? { excludeId: schedule!.id.toString() } : {}),
+        ...(isEdit ? { excludeId: schedule!.id } : {}),
       })
       const res = await fetch(`/api/konflikty?${params}`)
       const data = await res.json()
@@ -106,6 +113,7 @@ export function AppointmentForm({
     fd.set('startTime', startTime)
     fd.set('durationMin', durationMin.toString())
     fd.set('note', note)
+    if (isEdit) fd.set('status', status)
 
     startTransition(async () => {
       const result = isEdit ? await updateSchedule(schedule!.id, fd) : await createSchedule(fd)
@@ -153,7 +161,7 @@ export function AppointmentForm({
               <option value="">— vyberte pacienta —</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.lastName} {p.firstName} (pokoj {p.roomNumber})
+                  {p.lastName} {p.firstName}
                 </option>
               ))}
             </select>
@@ -230,6 +238,23 @@ export function AppointmentForm({
               </div>
             </div>
           </div>
+
+          {isEdit && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stav</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {effectiveConflicts.length > 0 && (
             <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 space-y-1">

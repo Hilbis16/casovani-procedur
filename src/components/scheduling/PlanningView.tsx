@@ -1,56 +1,62 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import type { Patient, Therapist, Procedure, ProcedureSchedule } from "@prisma/client";
-import { WeeklyGrid } from "./WeeklyGrid";
-import { WeekSelector } from "./WeekSelector";
-import { sameDay } from "@/lib/dateUtils";
+import { useState } from 'react'
+import type { Patient, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
+import { WeeklyGrid } from './WeeklyGrid'
+import { WeekSelector } from './WeekSelector'
+import { sameDay } from '@/lib/dateUtils'
 
 type FullSchedule = ProcedureSchedule & {
-  patient: Patient;
-  therapist: Therapist;
-  procedure: Procedure;
-};
-
-interface Props {
-  weekDays: Date[];
-  weekStart: Date;
-  schedules: FullSchedule[];
-  patients: Patient[];
-  therapists: Therapist[];
-  procedures: Procedure[];
+  patient: Patient
+  therapist: Therapist
+  procedure: Procedure
 }
 
-export function PlanningView({ weekDays, weekStart, schedules, patients, therapists, procedures }: Props) {
-  const [filterTherapistId, setFilterTherapistId] = useState<number | undefined>();
-  const [filterPatientId, setFilterPatientId] = useState<number | undefined>();
-  const [filterRoom, setFilterRoom] = useState<string>("");
+interface Props {
+  weekDays: Date[]
+  weekStart: Date
+  schedules: FullSchedule[]
+  patients: Patient[]
+  therapists: Therapist[]
+  procedures: Procedure[]
+}
 
-  const rooms = [...new Set(
-    procedures.filter((p) => p.room).map((p) => p.room!)
-  )].sort();
+export function PlanningView({
+  weekDays,
+  weekStart,
+  schedules,
+  patients,
+  therapists,
+  procedures,
+}: Props) {
+  const [filterTherapistId, setFilterTherapistId] = useState<string | undefined>()
+  const [filterPatientId, setFilterPatientId] = useState<string | undefined>()
+  const [filterRoom, setFilterRoom] = useState<string>('')
 
-  const hasFilters = !!filterTherapistId || !!filterPatientId || !!filterRoom;
+  const rooms = [...new Set(procedures.filter((p) => p.room).map((p) => p.room!))].sort()
+
+  const hasFilters = !!filterTherapistId || !!filterPatientId || !!filterRoom
 
   const filtered = schedules.filter((s) => {
-    if (filterTherapistId && s.therapistId !== filterTherapistId) return false;
-    if (filterPatientId && s.patientId !== filterPatientId) return false;
-    if (filterRoom && s.procedure.room !== filterRoom) return false;
-    return true;
-  });
+    if (filterTherapistId && s.therapistId !== filterTherapistId) return false
+    if (filterPatientId && s.patientId !== filterPatientId) return false
+    if (filterRoom && s.procedure.room !== filterRoom) return false
+    return true
+  })
 
-  const countForDay = (day: Date) =>
-    filtered.filter((s) => sameDay(new Date(s.date), day)).length;
+  const countForDay = (day: Date) => filtered.filter((s) => sameDay(new Date(s.date), day)).length
 
   return (
     <div>
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white border border-gray-200 rounded-xl">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-1">Filtr:</span>
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-1">
+          Filtr:
+        </span>
 
         <select
-          value={filterTherapistId ?? ""}
-          onChange={(e) => setFilterTherapistId(e.target.value ? Number(e.target.value) : undefined)}
+          value={filterTherapistId ?? ''}
+          onChange={(e) => setFilterTherapistId(e.target.value || undefined)}
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Všichni terapeuti</option>
@@ -62,14 +68,14 @@ export function PlanningView({ weekDays, weekStart, schedules, patients, therapi
         </select>
 
         <select
-          value={filterPatientId ?? ""}
-          onChange={(e) => setFilterPatientId(e.target.value ? Number(e.target.value) : undefined)}
+          value={filterPatientId ?? ''}
+          onChange={(e) => setFilterPatientId(e.target.value || undefined)}
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Všichni pacienti</option>
           {patients.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.lastName} {p.firstName} (pokoj {p.roomNumber})
+              {p.lastName} {p.firstName}
             </option>
           ))}
         </select>
@@ -82,14 +88,20 @@ export function PlanningView({ weekDays, weekStart, schedules, patients, therapi
           >
             <option value="">Všechny místnosti</option>
             {rooms.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>
+                {r}
+              </option>
             ))}
           </select>
         )}
 
         {hasFilters && (
           <button
-            onClick={() => { setFilterTherapistId(undefined); setFilterPatientId(undefined); setFilterRoom(""); }}
+            onClick={() => {
+              setFilterTherapistId(undefined)
+              setFilterPatientId(undefined)
+              setFilterRoom('')
+            }}
             className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             ✕ Zrušit filtr
@@ -102,13 +114,10 @@ export function PlanningView({ weekDays, weekStart, schedules, patients, therapi
       </div>
 
       {/* Per-day stats strip */}
-      <div
-        className="grid mb-2 px-0"
-        style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}
-      >
+      <div className="grid mb-2 px-0" style={{ gridTemplateColumns: '60px repeat(7, 1fr)' }}>
         <div />
         {weekDays.map((day, i) => {
-          const count = countForDay(day);
+          const count = countForDay(day)
           return (
             <div key={i} className="text-center py-1">
               {count > 0 ? (
@@ -119,7 +128,7 @@ export function PlanningView({ weekDays, weekStart, schedules, patients, therapi
                 <span className="text-xs text-gray-300">—</span>
               )}
             </div>
-          );
+          )
         })}
       </div>
 
@@ -134,5 +143,5 @@ export function PlanningView({ weekDays, weekStart, schedules, patients, therapi
         filterRoom={filterRoom || undefined}
       />
     </div>
-  );
+  )
 }

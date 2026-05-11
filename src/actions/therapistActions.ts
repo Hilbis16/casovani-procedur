@@ -28,7 +28,7 @@ export async function getAllTherapists() {
   })
 }
 
-export async function getTherapist(id: number) {
+export async function getTherapist(id: string) {
   return prisma.therapist.findUnique({
     where: { id },
     include: { availabilities: true },
@@ -65,7 +65,7 @@ export async function createTherapist(formData: FormData) {
   return { success: true }
 }
 
-export async function updateTherapist(id: number, formData: FormData) {
+export async function updateTherapist(id: string, formData: FormData) {
   const deny = await checkPermission('therapist.write')
   if (deny) return deny
 
@@ -89,7 +89,7 @@ export async function updateTherapist(id: number, formData: FormData) {
   return { success: true }
 }
 
-export async function toggleTherapistActive(id: number) {
+export async function toggleTherapistActive(id: string) {
   const deny = await checkPermission('therapist.write')
   if (deny) return
 
@@ -99,7 +99,7 @@ export async function toggleTherapistActive(id: number) {
   revalidatePath('/terapeuti')
 }
 
-export async function deleteTherapist(id: number) {
+export async function deleteTherapist(id: string) {
   const deny = await checkPermission('therapist.write')
   if (deny) return deny
 

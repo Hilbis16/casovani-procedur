@@ -1,14 +1,14 @@
-import Link from "next/link";
-import { getPatients } from "@/actions/patientActions";
-import { formatCzechFull } from "@/lib/dateUtils";
+import Link from 'next/link'
+import { getPatients } from '@/actions/patientActions'
+import { formatCzechFull } from '@/lib/dateUtils'
 
 export default async function PacientiPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string }>
 }) {
-  const { q } = await searchParams;
-  const patients = await getPatients(q);
+  const { q } = await searchParams
+  const patients = await getPatients(q)
 
   return (
     <div>
@@ -26,7 +26,7 @@ export default async function PacientiPage({
         <input
           name="q"
           defaultValue={q}
-          placeholder="Hledat podle jména nebo pokoje..."
+          placeholder="Hledat podle jména..."
           className="w-full max-w-md border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </form>
@@ -35,7 +35,10 @@ export default async function PacientiPage({
         {patients.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <p className="text-lg">Žádní pacienti</p>
-            <Link href="/pacienti/novy" className="mt-2 text-blue-600 text-sm hover:underline block">
+            <Link
+              href="/pacienti/novy"
+              className="mt-2 text-blue-600 text-sm hover:underline block"
+            >
               Přidat prvního pacienta →
             </Link>
           </div>
@@ -43,50 +46,91 @@ export default async function PacientiPage({
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Jméno</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Budova / Pokoj</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Příjezd</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Odjezd</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Jméno
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Příjezd
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Odjezd
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Stav
+                </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
-              {patients.map((p) => (
-                <tr key={p.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                  <td className="p-0">
-                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 font-medium text-gray-900">
-                      {p.lastName} {p.firstName}
-                    </Link>
-                  </td>
-                  <td className="p-0">
-                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 text-gray-600">
-                      {p.building ? `${p.building} · ` : ""}Pokoj {p.roomNumber}
-                    </Link>
-                  </td>
-                  <td className="p-0">
-                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 text-gray-600">
-                      {formatCzechFull(new Date(p.arrivalDate))}
-                    </Link>
-                  </td>
-                  <td className="p-0">
-                    <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3 text-gray-600">
-                      {formatCzechFull(new Date(p.departureDate))}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <Link
-                      href={`/pacienti/${p.id}/upravit`}
-                      className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      Upravit
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {patients.map((p) => {
+                const stay = p.stays[0]
+                return (
+                  <tr
+                    key={p.id}
+                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                  >
+                    <td className="p-0">
+                      <Link
+                        href={`/pacienti/${p.id}/pobyt`}
+                        className="block px-4 py-3 font-medium text-gray-900"
+                      >
+                        {p.lastName} {p.firstName}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link
+                        href={`/pacienti/${p.id}/pobyt`}
+                        className="block px-4 py-3 text-gray-600"
+                      >
+                        {stay ? formatCzechFull(new Date(stay.arrivalDate)) : '—'}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link
+                        href={`/pacienti/${p.id}/pobyt`}
+                        className="block px-4 py-3 text-gray-600"
+                      >
+                        {stay ? formatCzechFull(new Date(stay.departureDate)) : '—'}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link href={`/pacienti/${p.id}/pobyt`} className="block px-4 py-3">
+                        {stay ? (
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded font-medium ${
+                              stay.status === 'checked_in'
+                                ? 'bg-green-50 text-green-700'
+                                : stay.status === 'planned'
+                                  ? 'bg-blue-50 text-blue-700'
+                                  : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {stay.status === 'checked_in'
+                              ? 'Ubytován'
+                              : stay.status === 'planned'
+                                ? 'Plánovaný'
+                                : stay.status}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">bez pobytu</span>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <Link
+                        href={`/pacienti/${p.id}/upravit`}
+                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        Upravit
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
       </div>
     </div>
-  );
+  )
 }
