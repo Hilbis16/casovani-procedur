@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { findConflicts } from '@/lib/conflictDetection'
 import { addMinutes, formatDateParam } from '@/lib/dateUtils'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
+import { checkPermission } from '@/modules/core/rbac'
 
 const ScheduleSchema = z.object({
   patientId: z.coerce.number().int().positive(),
@@ -60,6 +61,9 @@ export async function getTherapistWeekSchedules(therapistId: number, weekStart: 
 }
 
 export async function createSchedule(formData: FormData) {
+  const deny = await checkPermission('schedule.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = ScheduleSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -102,6 +106,9 @@ export async function createSchedule(formData: FormData) {
 }
 
 export async function updateSchedule(id: number, formData: FormData) {
+  const deny = await checkPermission('schedule.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = ScheduleSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -146,6 +153,9 @@ export async function updateSchedule(id: number, formData: FormData) {
 }
 
 export async function updateScheduleStatus(id: number, status: string) {
+  const deny = await checkPermission('schedule.status')
+  if (deny) return deny
+
   await prisma.procedureSchedule.update({ where: { id }, data: { status } })
   await writeAuditLog({
     action: 'schedule.status_change',
@@ -158,6 +168,9 @@ export async function updateScheduleStatus(id: number, status: string) {
 }
 
 export async function deleteSchedule(id: number) {
+  const deny = await checkPermission('schedule.delete')
+  if (deny) return deny
+
   await prisma.procedureSchedule.delete({ where: { id } })
   await writeAuditLog({ action: 'schedule.delete', entity: 'ProcedureSchedule', entityId: id })
   revalidateAll()
@@ -239,6 +252,9 @@ export async function createRecurringSchedules(data: {
   to: string
   note?: string
 }): Promise<{ success: boolean; created: number; skipped: number; error?: string }> {
+  const deny = await checkPermission('schedule.write')
+  if (deny) return { ...deny, created: 0, skipped: 0 }
+
   const parsed = RecurringSchema.safeParse(data)
   if (!parsed.success)
     return { success: false, created: 0, skipped: 0, error: parsed.error.issues[0].message }

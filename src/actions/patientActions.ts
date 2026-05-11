@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
+import { checkPermission } from '@/modules/core/rbac'
 
 const PatientSchema = z.object({
   firstName: z.string().min(1, 'Jméno je povinné'),
@@ -36,6 +37,9 @@ export async function getPatient(id: number) {
 }
 
 export async function createPatient(formData: FormData) {
+  const deny = await checkPermission('patient.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = PatientSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -64,6 +68,9 @@ export async function createPatient(formData: FormData) {
 }
 
 export async function updatePatient(id: number, formData: FormData) {
+  const deny = await checkPermission('patient.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = PatientSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -94,6 +101,9 @@ export async function updatePatient(id: number, formData: FormData) {
 }
 
 export async function deletePatient(id: number) {
+  const deny = await checkPermission('patient.delete')
+  if (deny) return deny
+
   await prisma.patient.delete({ where: { id } })
   await writeAuditLog({ action: 'patient.delete', entity: 'Patient', entityId: id })
   revalidatePath('/pacienti')

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
+import { checkPermission } from '@/modules/core/rbac'
 
 const ProcedureSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
@@ -28,6 +29,9 @@ export async function getAllProcedures() {
 }
 
 export async function createProcedure(formData: FormData) {
+  const deny = await checkPermission('procedure.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = ProcedureSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -54,6 +58,9 @@ export async function createProcedure(formData: FormData) {
 }
 
 export async function updateProcedure(id: number, formData: FormData) {
+  const deny = await checkPermission('procedure.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = ProcedureSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -81,6 +88,9 @@ export async function updateProcedure(id: number, formData: FormData) {
 }
 
 export async function toggleProcedureActive(id: number) {
+  const deny = await checkPermission('procedure.write')
+  if (deny) return
+
   const p = await prisma.procedure.findUnique({ where: { id } })
   if (!p) return
   await prisma.procedure.update({ where: { id }, data: { isActive: !p.isActive } })

@@ -4,6 +4,38 @@ import { hash } from '@node-rs/argon2'
 
 const prisma = new PrismaClient()
 
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  admin: ['*'],
+  lekar: [
+    'patient.read',
+    'patient.write',
+    'schedule.read',
+    'schedule.write',
+    'schedule.delete',
+    'schedule.status',
+    'procedure.read',
+    'procedure.write',
+    'therapist.read',
+  ],
+  terapeut: [
+    'patient.read',
+    'schedule.read',
+    'schedule.write',
+    'schedule.status',
+    'procedure.read',
+    'therapist.read',
+  ],
+  recepcni: [
+    'patient.read',
+    'patient.write',
+    'schedule.read',
+    'schedule.write',
+    'procedure.read',
+    'therapist.read',
+  ],
+  auditor: ['audit.read'],
+}
+
 function weekDate(offsetDays: number): Date {
   const monday = startOfWeek(new Date(), { weekStartsOn: 1 })
   const d = addDays(monday, offsetDays)
@@ -11,7 +43,32 @@ function weekDate(offsetDays: number): Date {
   return d
 }
 
+const ROLE_NAMES: Record<string, string> = {
+  admin: 'Správce',
+  lekar: 'Lékař',
+  terapeut: 'Terapeut',
+  recepcni: 'Recepční',
+  auditor: 'Auditor',
+}
+
 async function seedUsers() {
+  // Seed all 5 roles with their permissions
+  const roleMap: Record<string, string> = {}
+  for (const [key, actions] of Object.entries(ROLE_PERMISSIONS)) {
+    const role = await prisma.role.upsert({
+      where: { key },
+      update: { name: ROLE_NAMES[key] ?? key },
+      create: { key, name: ROLE_NAMES[key] ?? key },
+    })
+    roleMap[key] = role.id
+
+    // Sync permissions: delete old, create new
+    await prisma.permission.deleteMany({ where: { roleId: role.id } })
+    await prisma.permission.createMany({
+      data: actions.map((action) => ({ roleId: role.id, action })),
+    })
+  }
+
   const operatorEmail = process.env.SEED_OPERATOR_EMAIL ?? 'operator@system.local'
   const operatorPassword = process.env.SEED_OPERATOR_PASSWORD ?? 'ChangeMe123!'
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@facility.local'
@@ -20,21 +77,10 @@ async function seedUsers() {
   const operatorHash = await hash(operatorPassword)
   const adminHash = await hash(adminPassword)
 
-  const operatorRole = await prisma.role.upsert({
-    where: { key: 'operator' },
-    update: {},
-    create: { key: 'operator', name: 'Operátor' },
-  })
-  const adminRole = await prisma.role.upsert({
-    where: { key: 'admin' },
-    update: {},
-    create: { key: 'admin', name: 'Správce' },
-  })
-
   const operator = await prisma.user.upsert({
     where: { email: operatorEmail },
     update: {},
-    create: { email: operatorEmail, passwordHash: operatorHash, fullName: 'Operátor Systému' },
+    create: { email: operatorEmail, passwordHash: operatorHash, fullName: 'Recepční Demo' },
   })
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
@@ -42,18 +88,20 @@ async function seedUsers() {
     create: { email: adminEmail, passwordHash: adminHash, fullName: 'Správce Zařízení' },
   })
 
+  // Assign roles (upsert to be idempotent)
   await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: operator.id, roleId: operatorRole.id } },
+    where: { userId_roleId: { userId: operator.id, roleId: roleMap.recepcni } },
     update: {},
-    create: { userId: operator.id, roleId: operatorRole.id },
+    create: { userId: operator.id, roleId: roleMap.recepcni },
   })
   await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: admin.id, roleId: adminRole.id } },
+    where: { userId_roleId: { userId: admin.id, roleId: roleMap.admin } },
     update: {},
-    create: { userId: admin.id, roleId: adminRole.id },
+    create: { userId: admin.id, roleId: roleMap.admin },
   })
 
-  console.log(`Uživatelé: ${operatorEmail}, ${adminEmail}`)
+  console.log(`Role: ${Object.keys(ROLE_PERMISSIONS).join(', ')}`)
+  console.log(`Uživatelé: ${operatorEmail} (recepční), ${adminEmail} (správce)`)
 }
 
 async function main() {

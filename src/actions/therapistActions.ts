@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
+import { checkPermission } from '@/modules/core/rbac'
 
 const TherapistSchema = z.object({
   firstName: z.string().min(1, 'Jméno je povinné'),
@@ -35,6 +36,9 @@ export async function getTherapist(id: number) {
 }
 
 export async function createTherapist(formData: FormData) {
+  const deny = await checkPermission('therapist.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = TherapistSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -62,6 +66,9 @@ export async function createTherapist(formData: FormData) {
 }
 
 export async function updateTherapist(id: number, formData: FormData) {
+  const deny = await checkPermission('therapist.write')
+  if (deny) return deny
+
   const raw = Object.fromEntries(formData)
   const parsed = TherapistSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
@@ -83,6 +90,9 @@ export async function updateTherapist(id: number, formData: FormData) {
 }
 
 export async function toggleTherapistActive(id: number) {
+  const deny = await checkPermission('therapist.write')
+  if (deny) return
+
   const t = await prisma.therapist.findUnique({ where: { id } })
   if (!t) return
   await prisma.therapist.update({ where: { id }, data: { isActive: !t.isActive } })
@@ -90,6 +100,9 @@ export async function toggleTherapistActive(id: number) {
 }
 
 export async function deleteTherapist(id: number) {
+  const deny = await checkPermission('therapist.write')
+  if (deny) return deny
+
   await prisma.therapist.delete({ where: { id } })
   await writeAuditLog({ action: 'therapist.delete', entity: 'Therapist', entityId: id })
   revalidatePath('/terapeuti')
