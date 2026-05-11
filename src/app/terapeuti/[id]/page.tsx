@@ -51,12 +51,20 @@ export default async function TerapeutDetailPage({
             <p className="text-gray-500 text-sm">{therapist.phone ?? 'Bez telefonu'}</p>
           </div>
         </div>
-        <Link
-          href={`/terapeuti/${therapist.id}/upravit`}
-          className="px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Upravit
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href={`/terapeuti/${therapist.id}/tisk`}
+            className="px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Tisk dne
+          </Link>
+          <Link
+            href={`/terapeuti/${therapist.id}/upravit`}
+            className="px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Upravit
+          </Link>
+        </div>
       </div>
 
       {therapist.availabilities.length > 0 && (

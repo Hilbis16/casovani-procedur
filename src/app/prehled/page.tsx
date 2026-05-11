@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { addDays, parseISO } from 'date-fns'
-import { getDaySchedules } from '@\/modules\/scheduling\/actions\/scheduleActions'
-import { getTherapists } from '@\/modules\/scheduling\/actions\/therapistActions'
+import { getDaySchedules } from '@/modules/scheduling/actions/scheduleActions'
+import { getTherapists } from '@/modules/scheduling/actions/therapistActions'
 import { PrintButton } from '@/components/print/PrintButton'
-import { formatCzechFull, formatDateParam } from '@\/modules\/core\/lib\/dateUtils'
+import { formatCzechFull, formatDateParam } from '@/modules/core/lib/dateUtils'
 
 export default async function PrehledPage({
   searchParams,
@@ -67,14 +67,22 @@ export default async function PrehledPage({
           {byTherapist.map(({ therapist, schedules: ts }) => (
             <div key={therapist.id} className="border border-gray-200 rounded-xl overflow-hidden">
               <div
-                className="px-4 py-2.5 font-semibold text-white text-sm"
+                className="px-4 py-2.5 font-semibold text-white text-sm flex items-center justify-between"
                 style={{ backgroundColor: therapist.color }}
               >
-                {therapist.lastName} {therapist.firstName}
-                <span className="ml-2 font-normal opacity-80 text-xs">
-                  ({ts.length}{' '}
-                  {ts.length === 1 ? 'pacient' : ts.length < 5 ? 'pacienti' : 'pacientů'})
+                <span>
+                  {therapist.lastName} {therapist.firstName}
+                  <span className="ml-2 font-normal opacity-80 text-xs">
+                    ({ts.length}{' '}
+                    {ts.length === 1 ? 'pacient' : ts.length < 5 ? 'pacienti' : 'pacientů'})
+                  </span>
                 </span>
+                <Link
+                  href={`/terapeuti/${therapist.id}/tisk?datum=${formatDateParam(date)}`}
+                  className="text-xs opacity-75 hover:opacity-100 underline print:hidden"
+                >
+                  Tisknout
+                </Link>
               </div>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
