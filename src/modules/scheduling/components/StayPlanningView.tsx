@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { addDays } from 'date-fns'
 import { AppointmentForm } from './AppointmentForm'
 import { RecurringProcedureForm } from './RecurringProcedureForm'
+import { StaySchedulePlanner } from './StaySchedulePlanner'
 import { formatCzechFull, sameDay } from '@/modules/core/lib/dateUtils'
 import { DAY_NAMES_FULL } from '@/lib/constants'
 import type { Patient, Stay, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
@@ -44,6 +45,7 @@ export function StayPlanningView({
   const [formDate, setFormDate] = useState<Date | null>(null)
   const [editSchedule, setEditSchedule] = useState<FullSchedule | undefined>(undefined)
   const [showRecurring, setShowRecurring] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
 
   const from = new Date(stay.arrivalDate)
   from.setUTCHours(0, 0, 0, 0)
@@ -89,12 +91,20 @@ export function StayPlanningView({
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">{schedules.length} procedur celkem</p>
-        <button
-          onClick={() => setShowRecurring(true)}
-          className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-        >
-          + Přidat plán procedury
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowWizard(true)}
+            className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+          >
+            Sestavit plán pobytu
+          </button>
+          <button
+            onClick={() => setShowRecurring(true)}
+            className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            + Přidat plán procedury
+          </button>
+        </div>
       </div>
 
       {days.map((day) => {
@@ -177,6 +187,20 @@ export function StayPlanningView({
           onClose={() => setShowRecurring(false)}
           onSuccess={() => {
             setShowRecurring(false)
+            router.refresh()
+          }}
+        />
+      )}
+
+      {showWizard && (
+        <StaySchedulePlanner
+          patient={patient}
+          stay={stay}
+          procedures={procedures}
+          therapists={therapists}
+          onClose={() => setShowWizard(false)}
+          onSuccess={() => {
+            setShowWizard(false)
             router.refresh()
           }}
         />

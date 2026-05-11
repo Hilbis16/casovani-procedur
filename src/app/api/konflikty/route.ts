@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   const startTime = searchParams.get('startTime')
   const durationMin = Number(searchParams.get('durationMin'))
   const excludeId = searchParams.get('excludeId') ?? undefined
+  const procedureId = searchParams.get('procedureId') ?? undefined
 
   if (!therapistId || !patientId || !date || !startTime || !durationMin) {
     return NextResponse.json({ conflicts: [] })
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     startTime,
     endTime,
     excludeScheduleId: excludeId,
+    procedureId,
   })
 
   return NextResponse.json({ conflicts })

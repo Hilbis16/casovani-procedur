@@ -90,12 +90,13 @@ export function AppointmentForm({
         startTime,
         durationMin: durationMin.toString(),
         ...(isEdit ? { excludeId: schedule!.id } : {}),
+        ...(procedureId ? { procedureId } : {}),
       })
       const res = await fetch(`/api/konflikty?${params}`)
       const data = await res.json()
       setConflicts(data.conflicts ?? [])
     }, 300)
-  }, [patientId, therapistId, date, startTime, durationMin, isEdit, schedule])
+  }, [patientId, procedureId, therapistId, date, startTime, durationMin, isEdit, schedule])
 
   const grouped = Object.entries(CATEGORIES)
     .map(([key, label]) => ({

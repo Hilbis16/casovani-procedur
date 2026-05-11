@@ -14,6 +14,7 @@ export default function UpravitProceduraPage() {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
   const [durationMin, setDurationMin] = useState('30')
+  const [capacity, setCapacity] = useState('1')
   const [description, setDescription] = useState('')
   const [building, setBuilding] = useState('')
   const [room, setRoom] = useState('')
@@ -28,6 +29,7 @@ export default function UpravitProceduraPage() {
         setName(p.name)
         setCategory(p.category)
         setDurationMin(String(p.durationMin))
+        setCapacity(String(p.capacity ?? 1))
         setDescription(p.description ?? '')
         setBuilding(p.building ?? '')
         setRoom(p.room ?? '')
@@ -96,20 +98,36 @@ export default function UpravitProceduraPage() {
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Délka trvání (minuty) *
-          </label>
-          <input
-            name="durationMin"
-            type="number"
-            required
-            min={5}
-            step={5}
-            value={durationMin}
-            onChange={(e) => setDurationMin(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Délka trvání (minuty) *
+            </label>
+            <input
+              name="durationMin"
+              type="number"
+              required
+              min={5}
+              step={5}
+              value={durationMin}
+              onChange={(e) => setDurationMin(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Max pacientů najednou *
+            </label>
+            <input
+              name="capacity"
+              type="number"
+              required
+              min={1}
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

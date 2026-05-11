@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createProcedure } from '@\/modules\/scheduling\/actions\/procedureActions'
+import { createProcedure } from '@/modules/scheduling/actions/procedureActions'
 import { CATEGORIES } from '@/lib/constants'
 
 export default function NovaProceduraPage() {
@@ -65,19 +65,34 @@ export default function NovaProceduraPage() {
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Délka trvání (minuty) *
-          </label>
-          <input
-            name="durationMin"
-            type="number"
-            required
-            min={5}
-            step={5}
-            defaultValue={30}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Délka trvání (minuty) *
+            </label>
+            <input
+              name="durationMin"
+              type="number"
+              required
+              min={5}
+              step={5}
+              defaultValue={30}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Max pacientů najednou *
+            </label>
+            <input
+              name="capacity"
+              type="number"
+              required
+              min={1}
+              defaultValue={1}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

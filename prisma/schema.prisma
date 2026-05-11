@@ -234,6 +234,7 @@ model Procedure {
   room        String?
   building    String?
   isActive    Boolean @default(true)
+  capacity    Int     @default(1)
 
   schedules ProcedureSchedule[]
 

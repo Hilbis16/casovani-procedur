@@ -1,7 +1,13 @@
 import { prisma } from '@/modules/core/db/prisma'
 
 export interface ConflictResult {
-  type: 'therapist' | 'patient' | 'room' | 'therapist_unavailable' | 'therapist_time_off'
+  type:
+    | 'therapist'
+    | 'patient'
+    | 'room'
+    | 'therapist_unavailable'
+    | 'therapist_time_off'
+    | 'procedure_capacity'
   message: string
   scheduleId: string
 }
@@ -18,9 +24,18 @@ export async function findConflicts(params: {
   endTime: string
   excludeScheduleId?: string
   procedureRoomId?: string
+  procedureId?: string
 }): Promise<ConflictResult[]> {
-  const { therapistId, patientId, date, startTime, endTime, excludeScheduleId, procedureRoomId } =
-    params
+  const {
+    therapistId,
+    patientId,
+    date,
+    startTime,
+    endTime,
+    excludeScheduleId,
+    procedureRoomId,
+    procedureId,
+  } = params
 
   const dayStart = new Date(date)
   dayStart.setUTCHours(0, 0, 0, 0)
@@ -64,9 +79,10 @@ export async function findConflicts(params: {
     return conflicts
   }
 
-  // Check schedule overlaps (therapist, patient, room)
+  // Check schedule overlaps (therapist, patient, room, procedure capacity)
   const orConditions: object[] = [{ therapistId }, { patientId }]
   if (procedureRoomId) orConditions.push({ procedureRoomId })
+  if (procedureId) orConditions.push({ procedureId })
 
   const schedules = await prisma.procedureSchedule.findMany({
     where: {
@@ -102,6 +118,27 @@ export async function findConflicts(params: {
         message: `Místnost ${s.procedureRoom?.number ?? ''} je v tento čas obsazena (${s.procedure.name}, ${s.startTime}–${s.endTime})`,
         scheduleId: s.id,
       })
+    }
+  }
+
+  if (procedureId) {
+    const proc = await prisma.procedure.findUnique({
+      where: { id: procedureId },
+      select: { capacity: true, name: true },
+    })
+    if (proc) {
+      const concurrentCount = schedules.filter(
+        (s) =>
+          s.procedureId === procedureId &&
+          intervalsOverlap(s.startTime, s.endTime, startTime, endTime)
+      ).length
+      if (concurrentCount >= proc.capacity) {
+        conflicts.push({
+          type: 'procedure_capacity',
+          message: `Procedura ${proc.name} je plně obsazena (max ${proc.capacity} ${proc.capacity === 1 ? 'pacient' : 'pacienti'} najednou)`,
+          scheduleId: '',
+        })
+      }
     }
   }
 

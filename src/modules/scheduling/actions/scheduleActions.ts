@@ -88,6 +88,7 @@ export async function createSchedule(formData: FormData) {
   const conflicts = await findConflicts({
     therapistId,
     patientId,
+    procedureId,
     date: dateObj,
     startTime,
     endTime,
@@ -135,6 +136,7 @@ export async function updateSchedule(id: string, formData: FormData) {
   const conflicts = await findConflicts({
     therapistId,
     patientId,
+    procedureId,
     date: dateObj,
     startTime,
     endTime,
@@ -241,6 +243,7 @@ export async function checkRecurringConflicts(data: {
       const conflicts = await findConflicts({
         patientId: data.patientId,
         therapistId: data.therapistId,
+        procedureId: data.procedureId,
         date: new Date(cur),
         startTime: data.startTime,
         endTime,
@@ -310,6 +313,7 @@ export async function createRecurringSchedules(data: {
       const conflicts = await findConflicts({
         patientId,
         therapistId,
+        procedureId,
         date: new Date(cur),
         startTime,
         endTime,
@@ -338,6 +342,91 @@ export async function createRecurringSchedules(data: {
 
   revalidateAll()
   revalidatePath(`/pacienti/${patientId}/pobyt`)
+  return { success: true, created: toCreate.length, skipped }
+}
+
+export async function createBatchSchedules(data: {
+  patientId: string
+  stayId: string
+  items: { procedureId: string; therapistId: string; count: number; preferredTime: string }[]
+}): Promise<{ success: boolean; created: number; skipped: number; error?: string }> {
+  const deny = await checkPermission('schedule.write')
+  if (deny) return { ...deny, created: 0, skipped: 0 }
+
+  const stay = await prisma.stay.findUnique({ where: { id: data.stayId } })
+  if (!stay) return { success: false, created: 0, skipped: 0, error: 'Pobyt nenalezen' }
+
+  const weekdays: Date[] = []
+  const cur = new Date(stay.arrivalDate)
+  cur.setUTCHours(0, 0, 0, 0)
+  const stayEnd = new Date(stay.departureDate)
+  stayEnd.setUTCHours(0, 0, 0, 0)
+  while (cur <= stayEnd) {
+    const dow = cur.getUTCDay()
+    if (dow >= 1 && dow <= 5) weekdays.push(new Date(cur))
+    cur.setUTCDate(cur.getUTCDate() + 1)
+  }
+  if (weekdays.length === 0)
+    return { success: false, created: 0, skipped: 0, error: 'Pobyt nemá pracovní dny' }
+
+  const toCreate: {
+    stayId: string
+    patientId: string
+    procedureId: string
+    therapistId: string
+    date: Date
+    startTime: string
+    endTime: string
+    note: null
+  }[] = []
+  let skipped = 0
+
+  for (const item of data.items) {
+    const procedure = await prisma.procedure.findUnique({ where: { id: item.procedureId } })
+    if (!procedure) {
+      skipped += item.count
+      continue
+    }
+
+    const endTime = addMinutes(item.preferredTime, procedure.durationMin)
+    const count = Math.min(item.count, weekdays.length)
+    const stride = weekdays.length / count
+
+    for (let i = 0; i < count; i++) {
+      const dayIndex = Math.min(Math.floor(i * stride), weekdays.length - 1)
+      const date = weekdays[dayIndex]
+
+      const conflicts = await findConflicts({
+        patientId: data.patientId,
+        therapistId: item.therapistId,
+        procedureId: item.procedureId,
+        date,
+        startTime: item.preferredTime,
+        endTime,
+      })
+      if (conflicts.length > 0) {
+        skipped++
+      } else {
+        toCreate.push({
+          stayId: data.stayId,
+          patientId: data.patientId,
+          procedureId: item.procedureId,
+          therapistId: item.therapistId,
+          date: new Date(date),
+          startTime: item.preferredTime,
+          endTime,
+          note: null,
+        })
+      }
+    }
+  }
+
+  if (toCreate.length > 0) {
+    await prisma.procedureSchedule.createMany({ data: toCreate })
+  }
+
+  revalidateAll()
+  revalidatePath(`/pacienti/${data.patientId}/pobyt`)
   return { success: true, created: toCreate.length, skipped }
 }
 

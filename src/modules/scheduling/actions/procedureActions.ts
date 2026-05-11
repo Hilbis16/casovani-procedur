@@ -10,6 +10,7 @@ const ProcedureSchema = z.object({
   name: z.string().min(1, 'Název je povinný'),
   category: z.string().min(1, 'Kategorie je povinná'),
   durationMin: z.coerce.number().int().min(5, 'Minimálně 5 minut'),
+  capacity: z.coerce.number().int().min(1).default(1),
   description: z.string().optional(),
   building: z.string().optional(),
   room: z.string().optional(),
@@ -36,12 +37,13 @@ export async function createProcedure(formData: FormData) {
   const parsed = ProcedureSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { name, category, durationMin, description, building, room } = parsed.data
+  const { name, category, durationMin, capacity, description, building, room } = parsed.data
   const procedure = await prisma.procedure.create({
     data: {
       name,
       category,
       durationMin,
+      capacity,
       description: description || null,
       building: building || null,
       room: room || null,
@@ -65,13 +67,14 @@ export async function updateProcedure(id: string, formData: FormData) {
   const parsed = ProcedureSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { name, category, durationMin, description, building, room } = parsed.data
+  const { name, category, durationMin, capacity, description, building, room } = parsed.data
   await prisma.procedure.update({
     where: { id },
     data: {
       name,
       category,
       durationMin,
+      capacity,
       description: description || null,
       building: building || null,
       room: room || null,
