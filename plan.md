@@ -1,27 +1,30 @@
 # Stav projektu – živý tracker
 
-Poslední aktualizace: 2026-05-08
-
-Podrobná architektura a roadmapa: `C:\Users\HP-David\.claude\plans\hlavn-pot-ebuji-ud-lat-d-kladnou-sleepy-origami.md`  
-Akční checklist s tickboxy: `ToDO.md`
+Poslední aktualizace: 2026-05-11
 
 ---
 
 ## Aktuální stav
 
-**Branch:** `feature/phase-0-foundation`  
-**Poslední tag:** `v0.2.1`  
-**DB:** PostgreSQL 16 v Dockeru (port 5435) — běží, seed OK  
+**Branch:** `feature/phase-1-auth`
+**Poslední tag:** `v0.4.0` (tagy v0.5.0–v0.8.1 dosud nevytvořeny)
+**DB:** PostgreSQL 16 v Dockeru (port 5435) — migrace `20260511125322_init`, seed OK
 **CI:** GitHub Actions workflow připraven (`.github/workflows/ci.yml`)
 
 ### Co funguje
 
-- Celý MVP — plánování, týdenní grid, recurring procedury, conflict detection
+- Celý MVP — plánování, týdenní grid, recurring procedury
+- **Phase 1**: Auth.js v5 + Credentials provider + PrismaAdapter, JWT strategy, audit log, security headers, proxy.ts (Next.js 16 konvence)
+- **Phase 2**: RBAC — 5 rolí (admin/lekar/terapeut/recepcni/auditor), admin UI (`/spravce/`)
+- **Phase 3 schema**: Building, Room, Stay, TherapistTimeOff, soft-delete, cuid IDs
+- **Conflict detection** (rozšířená): therapist + patient + room + availability + time_off
+- **Phase 4**: Modulární monolit `src/modules/{core,scheduling,hotel,reporting}`; ESLint cross-module boundary jako error
+- **Phase 5**: Field-level encryption (`Patient.note`, `ProcedureSchedule.note`) via `prisma-field-encryption` + `@47ng/cloak`
+- **Phase 6**: GDPR — stránka zásad, SAR export (PDF ke stažení), `ExportPatientButton` v pobytu pacienta
+- **Phase 7**: Hotel modul skeleton — `/ubytovani` přehled, `/ubytovani/novy` formulář, `stayActions`
 - ESLint + Prettier + Husky (pre-commit hook)
-- Vitest — 9/9 testů (conflictDetection.ts)
-- `npm run lint` ✅ | `npm test` ✅ | `npm run build` ✅
-- `docs/` skeleton — 7 dokumentů + 8 ADR
-- PostgreSQL dev stack (`docker compose -f deploy/dev/docker-compose.yml up -d`)
+- Vitest — **13/13 testů** (conflictDetection)
+- `npm run lint` ✅ | `npm run typecheck` ✅ | `npm test` ✅
 
 ### Dev prostředí — spuštění
 
@@ -34,72 +37,109 @@ npm run dev                                              # App → http://localh
 
 ## In progress
 
-Nic — Phase 0 uzavřena.
+Nic — Phases 0–7 + bug fixy uzavřeny.
 
 ---
 
-## Next up → Phase 1 — Auth + audit + headers
+## Next up → Phase 8 — Modular Tiers
 
-**Větev:** vytvořit `feature/phase-1-auth`  
-**Cíl:** žádný endpoint veřejný, každý write auditovaný.
+**Větev:** vytvořit `feature/phase-8-modular-tiers`
+**Cíl:** Aplikace lze provozovat ve třech tier-ech:
 
-Klíčové kroky (detail v `ToDO.md`):
+1. **scheduling-only** — jen ambulantní plánování (bez pobytů)
+2. **hotel-only** — jen ubytování
+3. **full** — kombinace obou (premium balíček)
 
-1. Wave A migrace: `Facility`, `User`, `Role`, `Permission`, `UserRole`, `Session`, `AuditLog`
-2. Auth.js v5 — email + heslo, argon2id, `/prihlaseni`, `/zapomenute-heslo`
-3. `withAudit()` wrapper na všech server actions
-4. Postgres trigger: AuditLog append-only
-5. Security headers (CSP nonce, HSTS, X-Frame-Options) v `next.config.ts`
-6. `src/middleware.ts` — auth gate pro všechny routes kromě `/prihlaseni`, `/api/health`
-7. Seed OPERATOR + FACILITY_ADMIN uživatelé z env vars
-8. `/api/health` veřejný endpoint
-9. CHANGELOG `[0.3.0]`, tag `v0.3.0`
+### Klíčová rozhodnutí
 
-**DoD:** přístup na `/planovani` bez session → redirect na `/prihlaseni`; write server action → řádek v `AuditLog`; `UPDATE "AuditLog" ...` v psql selže (trigger).
+- **Flag**: ENV proměnná `ENABLED_MODULES="scheduling,hotel"` v `.env` (jedna instance = jeden zákazník)
+- **`ProcedureSchedule.stayId` → nullable** — scheduling-only tier plánuje rovnou na pacienta bez kontextu pobytu
+- **`Patient` přesun do `core`** — sdílená entita, oba moduly ji potřebují (hotel-only tier musí umět zakládat pacienty bez scheduling)
+- **`core/contracts/` zůstane prázdná** — když je `stayId` nullable a Patient v core, scheduling nepotřebuje sahat do hotelu
+
+### Kroky
+
+| #   | Krok                                                                         | Soubory                                                                                                   | Riziko  |
+| --- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | DB migrace: `ProcedureSchedule.stayId` → `String?` nullable                  | `prisma/schema.prisma` + nová migrace                                                                     | Nízké   |
+| 2   | Přesun Patient do core                                                       | `scheduling/actions/patientActions.ts` → `core/actions/`; update ~15 importů                              | Střední |
+| 3   | Feature flag modul `core/features/index.ts`                                  | nový soubor; čte `process.env.ENABLED_MODULES`                                                            | Nízké   |
+| 4   | `.env` + `.env.example` rozšířit o `ENABLED_MODULES`                         | konfigurace                                                                                               | Nízké   |
+| 5   | Route guard v `proxy.ts`                                                     | `/ubytovani/*` 404 když hotel off; `/planovani`,`/procedury` 404 když scheduling off                      | Nízké   |
+| 6   | UI gating v `MainNav.tsx`                                                    | conditional nav items                                                                                     | Nízké   |
+| 7   | Scheduling bez Stay                                                          | `AppointmentForm`, `RecurringProcedureForm`: `stayId` optional; když hotel off → formulář pobyt nezobrazí | Střední |
+| 8   | Server Action guards                                                         | každá hotel action zkontroluje `isModuleEnabled('hotel')`, scheduling stejně                              | Nízké   |
+| 9   | RBAC: nové permissions `module:hotel`, `module:scheduling`                   | seed v `prisma/seed.ts`                                                                                   | Nízké   |
+| 10  | Conflict detection: ignorovat `stayId` když je `null`                        | `scheduling/lib/conflictDetection.ts`                                                                     | Nízké   |
+| 11  | Testy + update `docs/ARCHITECTURE.md` + `CHANGELOG.md` + `docs/MIGRATION.md` | testy, docs                                                                                               | Nízké   |
+| 12  | Tag `v0.9.0`                                                                 | git                                                                                                       | Nízké   |
+
+**DoD:** lze provozovat instanci jen s `ENABLED_MODULES="scheduling"` (hotel routy 404, nav skrývá Ubytování, planování bez pobytu funguje); stejně s `ENABLED_MODULES="hotel"` (scheduling routy 404, pacienti+pobyty funguje); default `"scheduling,hotel"` zachovává backward compat.
 
 ---
 
-## Backlog (stručně)
+## Backlog (Compliance proud)
 
 | Phase | Co                                                                                     | Status     |
 | ----- | -------------------------------------------------------------------------------------- | ---------- |
-| 2     | RBAC (admin/lekar/terapeut/recepcni/auditor) + break-glass mechanismus                 | Nespuštěno |
-| 3     | Schema Wave B: Stay, Room, Building, soft-delete, indexy, conflict detection rozšíření | Nespuštěno |
-| 4     | Refactor do `src/modules/{core,scheduling}` struktury                                  | Nespuštěno |
-| 5     | Field-level encryption (Patient.note, birthNumber, Schedule.note)                      | Nespuštěno |
-| 6     | GDPR UX (SAR, anonymizace, privacy policy, consent)                                    | Nespuštěno |
-| 7     | Hotel modul skeleton                                                                   | Nespuštěno |
-| 8     | Production hardening (rate limiting, pg-boss, pgBackRest, health)                      | Nespuštěno |
-| 9     | Deployment templates (docker-compose.prod, Caddy, INSTALL.md)                          | Nespuštěno |
-| 10    | Fleet management console + Operator handbook                                           | Nespuštěno |
+| 0     | Foundation (ESLint, Prettier, Vitest, CI, PostgreSQL)                                  | ✅ Hotovo  |
+| 1     | Auth + audit + security headers                                                        | ✅ Hotovo  |
+| 2     | RBAC (admin/lekar/terapeut/recepcni/auditor)                                           | ✅ Hotovo  |
+| 3     | Schema Wave B: Stay, Room, Building, soft-delete, indexy, conflict detection rozšíření | ✅ Hotovo  |
+| 4     | Modularizace do `src/modules/{core,scheduling,hotel,reporting}`                        | ✅ Hotovo  |
+| 5     | Field-level encryption (Patient.note, Schedule.note)                                   | ✅ Hotovo  |
+| 6     | GDPR UX (SAR export PDF, privacy policy, ExportPatientButton)                          | ✅ Hotovo  |
+| 7     | Hotel modul skeleton (`/ubytovani`, `/ubytovani/novy`)                                 | ✅ Hotovo  |
+| **8** | **Modular Tiers (ENABLED_MODULES flag, nullable stayId, Patient v core)**              | **Next**   |
+| 9     | Production hardening (rate limiting, pg-boss, pgBackRest, health)                      | Nespuštěno |
+| 10    | Deployment templates (docker-compose.prod, Caddy, INSTALL.md)                          | Nespuštěno |
+| 11    | Fleet management & operator tooling                                                    | Nespuštěno |
+
+---
+
+## Backlog (Scheduling Excellence proud)
+
+Compliance proud řeší, **aby aplikace SMĚLA běžet** v zdravotnickém zařízení. SE proud řeší, **proč si ji lázně KOUPÍ** — kvalita core domain.
+
+| #    | Co                               | Business value                                                            | Effort    |
+| ---- | -------------------------------- | ------------------------------------------------------------------------- | --------- |
+| SE-1 | Conflict detection v2            | ✅ implementováno v Phase 3 (5 dimenzí)                                   | —         |
+| SE-2 | Status workflow (5 stavů + akce) | Vykazování pojišťovně má jasná data                                       | 3–5 dní   |
+| SE-3 | Capacity & vytíženost dashboard  | Manažerka optimalizuje směny na základě dat                               | 1 týden   |
+| SE-4 | Drag & drop reschedule v gridu   | Recepční ušetří ~10 min/den drobnými přesuny                              | 1 týden   |
+| SE-5 | Recurring série group operations | Změny celé série (odjezd, výměna terapeuta) triviální                     | 1 týden   |
+| SE-6 | Suggest free slots               | Auto-řešení kolizí — recepční nehledá ručně                               | 1 týden   |
+| SE-7 | **Prescription planner**         | **30 min → 3 min plánování pobytu z předpisu. Hlavní prodejní argument.** | 2–3 týdny |
+| SE-8 | Per-therapist daily print        | Terapeuti vědí ráno co dělat — méně chaosu                                | 3–5 dní   |
+
+Detailní specifikace jednotlivých SE položek byla v původním `ToDO.md` (souhrnný popis výše stačí pro plánování; implementační detaily si dohledáme až při zadávání konkrétního ticketu).
 
 ---
 
 ## Otevřené technické otázky
 
-1. **Prisma 7** — breaking change (`url` v schema přesunuto do `prisma.config.ts`). Migrovat v Phase 3 nebo Phase 4 (zároveň s refactorem). Nepřepínat v Phase 1 — zbytečný risk.
-2. **Playwright** — odloženo z Phase 0 do Phase 1 (e2e testy potřebují přihlašovací flow).
-3. **`OPERATOR_HANDBOOK.md`** — napsat v Phase 2 (break-glass procedury, fleet management).
-4. **`SMLOUVA_O_ZPRACOVANI.md`** — DPA template, napsat v Phase 6.
-5. **`docs/adr/0009-no-supabase.md`** a **`0010-operator-controller-separation.md`** — přidat v Phase 1 resp. Phase 2.
+1. **Prisma 7** — breaking change (`url` v schema přesunuto do `prisma.config.ts`). Migrovat v Phase 9 nebo samostatně.
+2. **Playwright** — odloženo; přidat před Phase 9 (e2e testy potřebují přihlašovací flow).
+3. **Klíčový management `ENCRYPTION_KEY`** — rotace klíče, viz `docs/RUNBOOK.md`.
+4. **Konkrétní retention windows** — ověřit s právníkem (GDPR čl. 5 odst. 1 písm. e).
+5. **SAR export velikost** — pro pacienty s mnoha procedurami může být base64 payload velký; zvážit přesun na API route se streamingem v Phase 9.
+6. **Tier licensing**: pokud někdy bude potřeba per-Facility flag (multi-tenant), bude nutné přesunout `ENABLED_MODULES` z `.env` do `Facility` modelu — odloženo, single-tenant zatím stačí.
 
 ---
 
-## Původní MVP audit (plan.md ze dne 2026-04-30)
+## MVP audit — stav oprav
 
-Problémy z MVP auditu a jejich řešení v roadmapě:
-
-| #   | Problém                                        | Řeší                                |
-| --- | ---------------------------------------------- | ----------------------------------- |
-| 1   | Chybí autentizace                              | Phase 1                             |
-| 2   | Dostupnost terapeutů se nekontroluje           | Phase 3                             |
-| 3   | Chybí stránky terapeuta `/terapeuti/[id]`      | Phase 1 (součást scaffoldu)         |
-| 4   | `procedury/[id]/upravit` architekturální chyba | Phase 4 (refactor)                  |
-| 5   | Stav procedury nelze měnit z UI                | Phase 3 (AppointmentForm rozšíření) |
-| 6   | Redundantní `/pacienti/[id]`                   | Phase 3                             |
-| 7   | WeeklyGrid není responzivní                    | Phase 3                             |
-| 8   | Chybí toast notifikace                         | Phase 1 (přidat při auth)           |
-| 9   | Export není implementován                      | Phase 6 (SAR) / Phase 8 (PDF)       |
-| 10  | Opakující se procedury nelze editovat          | Phase 3                             |
-| 11  | Prázdný stav `/prehled`                        | Phase 3                             |
-| 12  | Validace dat pobytu (checkin > checkout)       | Phase 3 (Wave B Stay model)         |
+| #   | Problém                                        | Řeší    | Status              |
+| --- | ---------------------------------------------- | ------- | ------------------- |
+| 1   | Chybí autentizace                              | Phase 1 | ✅                  |
+| 2   | Dostupnost terapeutů se nekontroluje           | Phase 3 | ✅                  |
+| 3   | Chybí stránky terapeuta `/terapeuti/[id]`      | Phase 1 | ✅                  |
+| 4   | `procedury/[id]/upravit` architekturální chyba | Phase 4 | ✅                  |
+| 5   | Stav procedury nelze měnit z UI                | Phase 3 | ✅                  |
+| 6   | Redundantní `/pacienti/[id]`                   | Phase 3 | ✅                  |
+| 7   | WeeklyGrid není responzivní                    | Phase 9 | ⏳                  |
+| 8   | Chybí toast notifikace                         | Phase 9 | ⏳                  |
+| 9   | Export není implementován                      | Phase 6 | ✅ (PDF SAR export) |
+| 10  | Opakující se procedury nelze editovat          | SE-5    | ⏳                  |
+| 11  | Prázdný stav `/prehled`                        | Phase 9 | ⏳                  |
+| 12  | Validace dat pobytu (checkin > checkout)       | Phase 3 | ✅                  |
