@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/modules/core/db/prisma'
 import { auth } from '@/auth'
 import { headers } from 'next/headers'
 

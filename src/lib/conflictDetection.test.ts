@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock Prisma before importing conflictDetection
-vi.mock('./prisma', () => ({
+vi.mock('@/modules/core/db/prisma', () => ({
   prisma: {
     procedureSchedule: {
       findMany: vi.fn(),
@@ -15,8 +15,8 @@ vi.mock('./prisma', () => ({
   },
 }))
 
-import { findConflicts } from './conflictDetection'
-import { prisma } from './prisma'
+import { findConflicts } from '@/modules/scheduling/lib/conflictDetection'
+import { prisma } from '@/modules/core/db/prisma'
 
 const mockFindMany = vi.mocked(prisma.procedureSchedule.findMany)
 const mockAvailability = vi.mocked(prisma.therapistAvailability.findFirst)

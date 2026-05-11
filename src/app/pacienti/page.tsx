@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { getPatients } from '@/actions/patientActions'
-import { formatCzechFull } from '@/lib/dateUtils'
+import { getPatients } from '@\/modules\/scheduling\/actions\/patientActions'
+import { formatCzechFull } from '@/modules/core/lib/dateUtils'
 
 export default async function PacientiPage({
   searchParams,

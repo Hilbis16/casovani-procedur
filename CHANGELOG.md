@@ -6,6 +6,108 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 
 ---
 
+## [0.8.1] – 2026-05-11 — Audit bugů Phase 4–7
+
+### Opraveno
+
+- **Escapované importy** — `@\/modules\/...` nahrazeno správným `@/modules/...` v 11 souborech (scheduleActions, patientActions, therapistActions, procedureActions, adminActions, auditLogger, rbac/index, StayPlanningView, AppointmentForm, WeeklyGrid, api/konflikty/route)
+- **ESLint module-boundary rule** — přepsána z globálního `warn` na správné cross-module `error`: `src/modules/scheduling/**` nesmí importovat z `hotel`, `src/modules/hotel/**` nesmí importovat ze `scheduling`; `src/app/**` není omezeno (integrační vrstva)
+- **Test mock path** — `vi.mock('./prisma', ...)` opraveno na `vi.mock('@/modules/core/db/prisma', ...)` v `src/lib/conflictDetection.test.ts`; mock nefungoval po přesunu Prisma do `src/modules/core/db/`
+- **`getStays` soft-delete** — přidán filtr `where: { deletedAt: null }`; dříve vracela i smazané záznamy
+- **`createStay` bez autorizace** — přidán `checkPermission('patient.write')` a konzistentní return type `{ success: true, id } | { success: false, error }`
+- **PDF export byl stub** — `exportPatientData` teď skutečně generuje PDF přes `renderToBuffer` a vrací base64; `ExportPatientButton` dekóduje na `Blob` a spustí stažení; `PatientDataPDF` opraven pro `Date` objekty a rozšířen o sekci procedur
+- **`/ubytovani/novy` vedlo na 404** — vytvořena funkční stránka (server page + client formulář s výběrem pacienta, dat příjezdu/odjezdu, pokoje)
+- **`/ubytovani` chybělo v navigaci** — přidáno do `MainNav`
+- **`getRooms`** — přidána nová funkce do `src/modules/hotel/actions/stayActions.ts` pro výběr pokojů ve formuláři pobytu
+
+---
+
+## [0.8.0] – 2026-05-11 — Phase 7: Hotel modul skeleton
+
+### Přidáno
+
+- **Modul `hotel`** — vytvořena struktura `src/modules/hotel` pro budoucí hotelové funkce
+- **`stayActions`** — Server Actions `createStay` a `getStays` pro správu pobytů
+- **Stránka `/ubytovani`** — základní přehled pobytů s informacemi o kódu, pacientovi a termínu
+
+---
+
+## [0.7.0] – 2026-05-11 — Phase 6: GDPR UX
+
+### Přidáno
+
+- **Zásady ochrany osobních údajů** — veřejná stránka `/zasady-ochrany-osobnich-udaju` (GDPR čl. 13/14)
+- **SAR export infrastruktura** — služba `getPatientFullData` (`src/modules/core/gdpr/sar.ts`) sbírá kompletní data pacienta; PDF šablona `PatientDataPDF` (`src/modules/reporting/pdf/`) generuje dokument přes `@react-pdf/renderer`
+- **UI pro export** — `ExportPatientButton` v detailu pobytu pacienta (`/pacienti/[id]/pobyt`)
+
+---
+
+## [0.6.0] – 2026-05-11 — Phase 5: Field-level encryption
+
+### Přidáno
+
+- **Field-level encryption** — šifrování citlivých polí `Patient.note` a `ProcedureSchedule.note` pomocí `prisma-field-encryption`; pole označena direktivou `/// @encrypted` ve schématu
+- **Prisma extension** — Prisma client rozšířen o `fieldEncryptionExtension` v `src/modules/core/db/prisma.ts`; šifrování/dešifrování je transparentní pro volající kód
+- **Dokumentace** — `ENCRYPTION_KEY` doplněn do `.env.example` s instrukcí pro generování (`openssl rand -base64 32`)
+
+---
+
+## [0.5.0] – 2026-05-11 — Phase 4: Modularizace
+
+### Změněno
+
+- **Modulární monolit** — codebase refaktorován do struktury `src/modules/{core,scheduling,hotel,reporting}`:
+  - `src/actions/*` → `src/modules/scheduling/actions/` a `src/modules/core/actions/`
+  - `src/components/scheduling/*` → `src/modules/scheduling/components/`
+  - `src/lib/conflictDetection.ts` → `src/modules/scheduling/lib/`
+  - `src/lib/dateUtils.ts` → `src/modules/core/lib/`
+  - `src/lib/prisma.ts` → `src/modules/core/db/prisma.ts`
+- **Importy** — všechny importy napříč aplikací aktualizovány na nové cesty (`@/modules/core/...`, `@/modules/scheduling/...`)
+- **ESLint** — `no-restricted-imports` cross-module boundary rule přidána (cross-module porušení jsou `error`)
+- **Typování** — kompletní `npm run typecheck` po refaktoru pro zajištění stability
+
+---
+
+## [0.4.0] – 2026-05-11 — Phase 3: Schema redesign (Wave B)
+
+### Přidáno
+
+- **`Building`** — model pro budovy (code, name); seed: budovy A a B
+- **`Room`** — model pro pokoje/procedurní místnosti (kind: patient_room / procedure_room / office; capacity; isActive)
+- **`Stay`** — model pobytu pacienta oddělený od `Patient`; sloupce: code (čitelný `2026-XXXX`), patientId, roomId, arrivalDate, departureDate, status (planned / checked_in / checked_out / cancelled), deletedAt
+- **`TherapistTimeOff`** — nepřítomnost terapeuta (startsAt, endsAt, reason)
+- **Soft-delete** na `Patient`, `Stay`, `ProcedureSchedule` (pole `deletedAt DateTime?`)
+- **Indexy** na (patientId, date), (therapistId, date), (procedureRoomId, date), (stayId), (deletedAt)
+- **`procedureRoomId`** na `ProcedureSchedule` — volitelná vazba na procedurní místnost
+- **`stayId`** (required) na `ProcedureSchedule` — povinná vazba na pobyt
+- **Conflict detection rozšíření** (`src/lib/conflictDetection.ts`):
+  - Kontrola `TherapistAvailability` (den v týdnu + pracovní hodiny) — nový typ `therapist_unavailable`
+  - Kontrola `TherapistTimeOff` — nový typ `therapist_time_off`
+  - Kontrola obsazenosti procedurní místnosti — nový typ `room`
+- **13 Vitest testů** pro `conflictDetection.ts` (pokrytí: no-conflict, adjacent intervals, min overlap, unavailable day, outside hours, time off, room conflict)
+- **`AppointmentForm`** — status selector v edit módu (planned / confirmed / completed / cancelled / no_show)
+- **`PatientForm`** — přijímá `stay?: Stay | null`; arrivalDate/departureDate se pre-fill ze stay; odstraněny pole roomNumber/building
+- **`StayPlanningView`** — přijímá `stay: Stay` prop místo čtení z `Patient`
+- **`RecurringProcedureForm`** — přijímá `stay: Stay` prop
+
+### Změněno
+
+- **Všechna ID** migrována z `Int` na `String @default(cuid())` (Patient, Therapist, Procedure, ProcedureSchedule, TherapistAvailability, TherapistTimeOff)
+- **`Patient`** — odstraněny sloupce: `roomNumber`, `building`, `arrivalDate`, `departureDate` (přesunuto do `Stay`)
+- **`createSchedule` / `createRecurringSchedules`** — automaticky vyhledají aktivní `Stay` pro pacienta; vrátí chybu pokud pobyt neexistuje
+- **`createPatient`** — zároveň vytvoří `Stay` s automaticky generovaným kódem `${year}-${XXXX}`
+- **Migrace** — smazány 3 staré migrace (20260508165632_init, 20260511111718_wave_a_auth_audit, 20260511111719_audit_log_trigger); nahrazena jednou čistou `20260511125322_init`
+- **Seed** — přepsán: vytváří Building → Room → Therapist → Patient → Stay → Procedure → ProcedureSchedule
+- **`src/app/api/konflikty/route.ts`** — odstraněn `Number()` parsing ID parametrů
+- **`prehled/page.tsx`** — odstraněno `s.patient.roomNumber` (neexistuje)
+
+### Odstraněno
+
+- Sloupce `Patient.roomNumber`, `Patient.building`, `Patient.arrivalDate`, `Patient.departureDate`
+- Číselné (`Int`) primární klíče ve všech modelech
+
+---
+
 ## [0.2.1] – 2026-05-08 (hotfix)
 
 ### Opraveno

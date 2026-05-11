@@ -147,6 +147,7 @@ model Patient {
   id        String    @id @default(cuid())
   firstName String
   lastName  String
+  /// @encrypted
   note      String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -250,6 +251,7 @@ model ProcedureSchedule {
   date            DateTime
   startTime       String
   endTime         String
+  /// @encrypted
   note            String?
   status          String    @default("planned")
   createdAt       DateTime  @default(now())

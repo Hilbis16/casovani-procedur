@@ -1,21 +1,21 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { addDays } from "date-fns";
-import { formatCzechDate, formatDateParam } from "@/lib/dateUtils";
+import Link from 'next/link'
+import { addDays } from 'date-fns'
+import { formatCzechDate, formatDateParam } from '@\/modules\/core\/lib\/dateUtils'
 
 interface Props {
-  weekStart: Date;
-  baseHref: string;
+  weekStart: Date
+  baseHref: string
 }
 
 export function WeekSelector({ weekStart, baseHref }: Props) {
-  const weekEnd = addDays(weekStart, 6);
-  const prevWeek = addDays(weekStart, -7);
-  const nextWeek = addDays(weekStart, 7);
+  const weekEnd = addDays(weekStart, 6)
+  const prevWeek = addDays(weekStart, -7)
+  const nextWeek = addDays(weekStart, 7)
 
   function href(date: Date) {
-    return `${baseHref}?tyden=${formatDateParam(date)}`;
+    return `${baseHref}?tyden=${formatDateParam(date)}`
   }
 
   return (
@@ -36,5 +36,5 @@ export function WeekSelector({ weekStart, baseHref }: Props) {
         →
       </Link>
     </div>
-  );
+  )
 }

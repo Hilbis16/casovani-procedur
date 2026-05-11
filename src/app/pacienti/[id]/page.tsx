@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getPatient } from '@/actions/patientActions'
-import { getPatientWeekSchedules } from '@/actions/scheduleActions'
-import { getTherapists } from '@/actions/therapistActions'
-import { getProcedures } from '@/actions/procedureActions'
-import { getPatients } from '@/actions/patientActions'
-import { WeeklyGrid } from '@/components/scheduling/WeeklyGrid'
-import { WeekSelector } from '@/components/scheduling/WeekSelector'
-import { getWeekDays, parseWeekParam, formatCzechFull } from '@/lib/dateUtils'
+import { getPatient } from '@/modules/scheduling/actions/patientActions'
+import { getPatientWeekSchedules } from '@/modules/scheduling/actions/scheduleActions'
+import { getTherapists } from '@/modules/scheduling/actions/therapistActions'
+import { getProcedures } from '@/modules/scheduling/actions/procedureActions'
+import { getPatients } from '@/modules/scheduling/actions/patientActions'
+import { WeeklyGrid } from '@/modules/scheduling/components/WeeklyGrid'
+import { WeekSelector } from '@/modules/scheduling/components/WeekSelector'
+import { getWeekDays, parseWeekParam, formatCzechFull } from '@/modules/core/lib/dateUtils'
 
 export default async function PacientDetailPage({
   params,

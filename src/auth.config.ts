@@ -8,7 +8,8 @@ function isPublic(pathname: string) {
 
 export const authConfig = {
   pages: { signIn: '/prihlaseni', error: '/prihlaseni' },
-  session: { strategy: 'database' as const },
+  // jwt here — proxy runs on Edge without DB access; auth.ts overrides to 'database'
+  session: { strategy: 'jwt' as const },
   callbacks: {
     authorized({ auth, request }) {
       if (isPublic(request.nextUrl.pathname)) return true

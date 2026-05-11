@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { checkRecurringConflicts, createRecurringSchedules } from '@/actions/scheduleActions'
+import {
+  checkRecurringConflicts,
+  createRecurringSchedules,
+} from '@\/modules\/scheduling\/actions\/scheduleActions'
 import { CATEGORIES, DAY_NAMES, START_TIMES } from '@/lib/constants'
-import { formatDateParam, formatCzechFull } from '@/lib/dateUtils'
+import { formatDateParam, formatCzechFull } from '@\/modules\/core\/lib\/dateUtils'
 import type { Patient, Stay, Therapist, Procedure } from '@prisma/client'
 
 type PreviewEntry = { date: string; hasConflict: boolean; conflictMessage?: string }

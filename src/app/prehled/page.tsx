@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { addDays, parseISO } from 'date-fns'
-import { getDaySchedules } from '@/actions/scheduleActions'
-import { getTherapists } from '@/actions/therapistActions'
+import { getDaySchedules } from '@\/modules\/scheduling\/actions\/scheduleActions'
+import { getTherapists } from '@\/modules\/scheduling\/actions\/therapistActions'
 import { PrintButton } from '@/components/print/PrintButton'
-import { formatCzechFull, formatDateParam } from '@/lib/dateUtils'
+import { formatCzechFull, formatDateParam } from '@\/modules\/core\/lib\/dateUtils'
 
 export default async function PrehledPage({
   searchParams,

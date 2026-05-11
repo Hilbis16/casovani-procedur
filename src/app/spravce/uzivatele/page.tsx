@@ -1,4 +1,4 @@
-import { getAdminUsers, getRoles } from '@/actions/adminActions'
+import { getAdminUsers, getRoles } from '@\/modules\/core\/actions\/adminActions'
 import { UserManagement } from './UserManagement'
 
 export default async function UzivateleAdminPage() {

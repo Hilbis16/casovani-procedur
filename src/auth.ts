@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/modules/core/db/prisma'
 import { verify } from '@node-rs/argon2'
 import { z } from 'zod'
 import { authConfig } from '@/auth.config'
@@ -46,9 +46,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user && user) {
-        session.user.id = user.id
+    async jwt({ token, user }) {
+      if (user?.id) token.id = user.id
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string
       }
       return session
     },

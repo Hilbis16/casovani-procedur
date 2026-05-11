@@ -1,4 +1,4 @@
-import { getRoles } from '@/actions/adminActions'
+import { getRoles } from '@\/modules\/core\/actions\/adminActions'
 
 export default async function RolePage() {
   const roles = await getRoles()

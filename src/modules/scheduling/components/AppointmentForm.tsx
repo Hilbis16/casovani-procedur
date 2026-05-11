@@ -1,9 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { createSchedule, updateSchedule, deleteSchedule } from '@/actions/scheduleActions'
+import {
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+} from '@/modules/scheduling/actions/scheduleActions'
 import { START_TIMES, CATEGORIES } from '@/lib/constants'
-import { addMinutes, formatDateParam } from '@/lib/dateUtils'
+import { addMinutes, formatDateParam } from '@/modules/core/lib/dateUtils'
 import type { Patient, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
 
 type FullSchedule = ProcedureSchedule & {

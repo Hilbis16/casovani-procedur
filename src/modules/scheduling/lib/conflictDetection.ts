@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { prisma } from '@/modules/core/db/prisma'
 
 export interface ConflictResult {
   type: 'therapist' | 'patient' | 'room' | 'therapist_unavailable' | 'therapist_time_off'

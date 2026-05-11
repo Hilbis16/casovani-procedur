@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { addDays } from 'date-fns'
 import { AppointmentForm } from './AppointmentForm'
 import { RecurringProcedureForm } from './RecurringProcedureForm'
-import { formatCzechFull, sameDay } from '@/lib/dateUtils'
+import { formatCzechFull, sameDay } from '@/modules/core/lib/dateUtils'
 import { DAY_NAMES_FULL } from '@/lib/constants'
 import type { Patient, Stay, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
 

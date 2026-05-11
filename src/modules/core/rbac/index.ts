@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/modules/core/db/prisma'
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: ['*'],

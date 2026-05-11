@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { addDays } from 'date-fns'
-import { getPatient } from '@/actions/patientActions'
-import { getPatientStaySchedules } from '@/actions/scheduleActions'
+import { getPatient } from '@/modules/scheduling/actions/patientActions'
+import { getPatientStaySchedules } from '@/modules/scheduling/actions/scheduleActions'
 import { PrintButton } from '@/components/print/PrintButton'
-import { formatCzechFull, sameDay } from '@/lib/dateUtils'
+import { formatCzechFull, sameDay } from '@/modules/core/lib/dateUtils'
 
 const STATUS_LABELS: Record<string, string> = {
   planned: 'naplánováno',

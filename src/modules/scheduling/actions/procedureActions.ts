@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/modules/core/db/prisma'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
 import { checkPermission } from '@/modules/core/rbac'
 

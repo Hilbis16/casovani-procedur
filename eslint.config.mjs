@@ -12,24 +12,37 @@ const config = [
   // Next.js recommended rules (React, hooks, a11y, import, @next/next)
   ...nextConfig,
 
-  // Project-specific rules on top
+  // Scheduling module cannot reach into hotel internals (cross-module boundary)
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['src/modules/scheduling/**/*.{ts,tsx}'],
     rules: {
-      // Module boundary enforcement — Phase 0: warn; Phase 4: flip to error
       'no-restricted-imports': [
-        'warn',
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/modules/hotel/*'],
+              message:
+                'Scheduling module cannot import hotel internals. Use @/modules/core contracts for cross-module access.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // Hotel module cannot reach into scheduling internals (cross-module boundary)
+  {
+    files: ['src/modules/hotel/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
         {
           patterns: [
             {
               group: ['@/modules/scheduling/*'],
               message:
-                'Access scheduling internals only from src/modules/scheduling or src/app. Use @/modules/core contracts for cross-module access.',
-            },
-            {
-              group: ['@/modules/hotel/*'],
-              message:
-                'Access hotel internals only from src/modules/hotel or src/app. Use @/modules/core contracts for cross-module access.',
+                'Hotel module cannot import scheduling internals. Use @/modules/core contracts for cross-module access.',
             },
           ],
         },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findConflicts } from '@/lib/conflictDetection'
-import { addMinutes } from '@/lib/dateUtils'
+import { findConflicts } from '@/modules/scheduling/lib/conflictDetection'
+import { addMinutes } from '@/modules/core/lib/dateUtils'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)

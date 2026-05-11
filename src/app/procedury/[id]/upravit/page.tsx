@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { updateProcedure, getAllProcedures } from '@/actions/procedureActions'
+import { updateProcedure, getAllProcedures } from '@/modules/scheduling/actions/procedureActions'
 import { CATEGORIES } from '@/lib/constants'
 
 export default function UpravitProceduraPage() {

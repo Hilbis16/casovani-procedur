@@ -9,7 +9,7 @@
 | RBAC (need-to-know)              | §27 Z. 372/2011                    | Roles: admin/lekar/terapeut/recepcni/auditor              | Phase 2 |
 | Šifrování PII at-rest            | GDPR Art. 32(1)(a), §5 Z. 110/2019 | prisma-field-encryption AES-256-GCM pro note, birthNumber | Phase 5 |
 | TLS in-transit                   | GDPR Art. 32                       | Caddy auto-cert, HSTS preload                             | Phase 9 |
-| Souhlas subjektu                 | GDPR Art. 6, 7                     | Patient.consents JSONB                                    | Phase 6 |
+| Souhlas subjektu                 | GDPR Art. 6, 7                     | Patient.consents JSONB                                    | Skipped |
 | Právo na přístup (SAR)           | GDPR Art. 15                       | /spravce/pacienti/[id]/export                             | Phase 6 |
 | Právo na výmaz                   | GDPR Art. 17                       | Anonymizace (ne smazání — audit zachován)                 | Phase 6 |
 | Retention & purge                | Vyhl. 98/2012 §3                   | pg-boss nightly worker                                    | Phase 8 |

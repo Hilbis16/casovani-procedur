@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { Patient, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
 import { AppointmentForm } from './AppointmentForm'
 import { DAY_NAMES, GRID_START_HOUR, GRID_END_HOUR, PIXELS_PER_MINUTE } from '@/lib/constants'
-import { formatCzechDate, sameDay, timeToMinutes } from '@/lib/dateUtils'
+import { formatCzechDate, sameDay, timeToMinutes } from '@/modules/core/lib/dateUtils'
 
 type FullSchedule = ProcedureSchedule & {
   patient: Patient

@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/terapeuti', label: 'Terapeuti' },
   { href: '/procedury', label: 'Procedury' },
   { href: '/prehled', label: 'Denní přehled' },
+  { href: '/ubytovani', label: 'Ubytování' },
   { href: '/spravce/uzivatele', label: 'Správce' },
 ]
 

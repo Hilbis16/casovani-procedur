@@ -1,4 +1,4 @@
-import { getAuditLogs } from '@/actions/adminActions'
+import { getAuditLogs } from '@\/modules\/core\/actions\/adminActions'
 
 export default async function AuditPage({
   searchParams,

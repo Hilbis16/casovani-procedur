@@ -1,52 +1,67 @@
-"use client";
+'use client'
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { createTherapist, updateTherapist, deleteTherapist } from "@/actions/therapistActions";
-import type { Therapist } from "@prisma/client";
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import {
+  createTherapist,
+  updateTherapist,
+  deleteTherapist,
+} from '@\/modules\/scheduling\/actions\/therapistActions'
+import type { Therapist } from '@prisma/client'
 
 const COLORS = [
-  "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
-  "#06B6D4", "#F97316", "#84CC16", "#EC4899", "#6366F1",
-];
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#06B6D4',
+  '#F97316',
+  '#84CC16',
+  '#EC4899',
+  '#6366F1',
+]
 
 interface Props {
-  therapist?: Therapist;
+  therapist?: Therapist
 }
 
 export function TherapistForm({ therapist }: Props) {
-  const router = useRouter();
-  const isEdit = !!therapist;
-  const [color, setColor] = useState(therapist?.color ?? COLORS[0]);
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const router = useRouter()
+  const isEdit = !!therapist
+  const [color, setColor] = useState(therapist?.color ?? COLORS[0])
+  const [error, setError] = useState('')
+  const [isPending, startTransition] = useTransition()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
-    const fd = new FormData(e.currentTarget);
-    fd.set("color", color);
+    e.preventDefault()
+    setError('')
+    const fd = new FormData(e.currentTarget)
+    fd.set('color', color)
 
     startTransition(async () => {
-      const result = isEdit ? await updateTherapist(therapist!.id, fd) : await createTherapist(fd);
+      const result = isEdit ? await updateTherapist(therapist!.id, fd) : await createTherapist(fd)
       if (result.success) {
-        router.push("/terapeuti");
+        router.push('/terapeuti')
       } else {
-        setError(result.error ?? "Chyba při ukládání");
+        setError(result.error ?? 'Chyba při ukládání')
       }
-    });
+    })
   }
 
   async function handleDelete() {
-    if (!confirm("Opravdu smazat tohoto terapeuta?")) return;
+    if (!confirm('Opravdu smazat tohoto terapeuta?')) return
     startTransition(async () => {
-      await deleteTherapist(therapist!.id);
-      router.push("/terapeuti");
-    });
+      await deleteTherapist(therapist!.id)
+      router.push('/terapeuti')
+    })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4 max-w-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4 max-w-lg"
+    >
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Jméno *</label>
@@ -72,7 +87,7 @@ export function TherapistForm({ therapist }: Props) {
         <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
         <input
           name="phone"
-          defaultValue={therapist?.phone ?? ""}
+          defaultValue={therapist?.phone ?? ''}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="např. 602 123 456"
         />
@@ -89,7 +104,7 @@ export function TherapistForm({ therapist }: Props) {
               className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
               style={{
                 backgroundColor: c,
-                borderColor: color === c ? "#1f2937" : "transparent",
+                borderColor: color === c ? '#1f2937' : 'transparent',
               }}
             />
           ))}
@@ -126,10 +141,10 @@ export function TherapistForm({ therapist }: Props) {
             disabled={isPending}
             className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {isPending ? "Ukládám..." : isEdit ? "Uložit změny" : "Přidat terapeuta"}
+            {isPending ? 'Ukládám...' : isEdit ? 'Uložit změny' : 'Přidat terapeuta'}
           </button>
         </div>
       </div>
     </form>
-  );
+  )
 }

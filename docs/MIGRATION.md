@@ -13,12 +13,22 @@ Append-only log: každá Prisma migrace, datum, důvod, rollback postup.
 
 ---
 
-## Wave B — Phase 3 (plánováno)
+## `20260511125322_init` — Phase 3 (Wave B schema reset)
 
-**Datum:** TBD  
-**Obsah:** Stay, Room, Building, TherapistTimeOff; soft-delete; indexy; CHECK constraints  
-**Důvod:** Příprava pro hotelový modul; separace pobytu od pacienta  
-**Rollback:** Backfill skript pro obnovení stay fields na Patient, DROP nových tabulek
+**Datum:** 2026-05-11  
+**Soubor:** `prisma/migrations/20260511125322_init/migration.sql`  
+**Obsah:** Kompletní Wave B schema:
+
+- Nové modely: `Building`, `Room` (enum kind: patient_room/procedure_room/office), `Stay` (code, patientId, roomId, arrivalDate, departureDate, status enum, deletedAt), `TherapistTimeOff`
+- Všechna ID: `String @default(cuid())` (bylo `Int @default(autoincrement())`)
+- `Patient`: odstraněny sloupce `roomNumber`, `building`, `arrivalDate`, `departureDate`; přidáno `deletedAt`
+- `ProcedureSchedule`: přidáno `stayId String` (required FK na Stay), `procedureRoomId String?` (FK na Room), `deletedAt`
+- Indexy: (patientId, date), (therapistId, date), (procedureRoomId, date), (stayId), (deletedAt)
+- Status enum: ScheduleStatus (PLANNED/CONFIRMED/COMPLETED/CANCELLED/NO_SHOW), StayStatus (PLANNED/CHECKED_IN/CHECKED_OUT/CANCELLED), RoomKind
+  **Důvod:** Separace pobytu od pacienta; příprava pro hotel modul; string IDs pro cuid; soft-delete; room scheduling  
+  **Reset:** Smazány 3 předchozí migrace (20260508165632_init, 20260511111718_wave_a_auth_audit, 20260511111719_audit_log_trigger). Dev DB resetována (`prisma migrate reset`).  
+  **Rollback:** Jen dev — `docker compose down -v && docker compose up -d && npx prisma migrate dev`  
+  **Poznámka:** Existující SQLite/dev data nebyla zachována (jen testovací seed data). Seed přepsán — vytváří Building → Room → Therapist → Patient → Stay → Procedure → ProcedureSchedule.
 
 ---
 

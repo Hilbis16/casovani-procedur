@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
-import { findConflicts } from '@/lib/conflictDetection'
-import { addMinutes, formatDateParam } from '@/lib/dateUtils'
+import { prisma } from '@/modules/core/db/prisma'
+import { findConflicts } from '@/modules/scheduling/lib/conflictDetection'
+import { addMinutes, formatDateParam } from '@/modules/core/lib/dateUtils'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
 import { checkPermission } from '@/modules/core/rbac'
 

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getPatient } from '@/actions/patientActions'
+import { getPatient } from '@/modules/scheduling/actions/patientActions'
 import { PatientForm } from '@/components/patients/PatientForm'
 
 export default async function UpravitPacientaPage({ params }: { params: Promise<{ id: string }> }) {

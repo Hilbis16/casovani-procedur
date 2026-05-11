@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getTherapist } from '@/actions/therapistActions'
+import { getTherapist } from '@/modules/scheduling/actions/therapistActions'
 import { TherapistForm } from '@/components/therapists/TherapistForm'
 
 export default async function UpravitTerapeutaPage({

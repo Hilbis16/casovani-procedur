@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getPatient } from '@/actions/patientActions'
-import { getPatientStaySchedules } from '@/actions/scheduleActions'
-import { getTherapists } from '@/actions/therapistActions'
-import { getProcedures } from '@/actions/procedureActions'
-import { getPatients } from '@/actions/patientActions'
-import { StayPlanningView } from '@/components/scheduling/StayPlanningView'
-import { formatCzechFull } from '@/lib/dateUtils'
+import { getPatient } from '@/modules/scheduling/actions/patientActions'
+import { getPatientStaySchedules } from '@/modules/scheduling/actions/scheduleActions'
+import { getTherapists } from '@/modules/scheduling/actions/therapistActions'
+import { getProcedures } from '@/modules/scheduling/actions/procedureActions'
+import { getPatients } from '@/modules/scheduling/actions/patientActions'
+import { StayPlanningView } from '@/modules/scheduling/components/StayPlanningView'
+import { formatCzechFull } from '@/modules/core/lib/dateUtils'
+import { ExportPatientButton } from '@/modules/core/gdpr/ExportPatientButton'
 
 export default async function PobytPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -59,12 +60,15 @@ export default async function PobytPage({ params }: { params: Promise<{ id: stri
             Pobyt: {formatCzechFull(from)} – {formatCzechFull(to)} ({stayDays} dní)
           </p>
         </div>
-        <Link
-          href={`/pacienti/${patient.id}/tisk`}
-          className="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          Tisknout rozvrh →
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportPatientButton patientId={id} />
+          <Link
+            href={`/pacienti/${patient.id}/tisk`}
+            className="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Tisknout rozvrh →
+          </Link>
+        </div>
       </div>
 
       <h2 className="text-base font-semibold text-gray-700 mb-3">

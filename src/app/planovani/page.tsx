@@ -1,25 +1,25 @@
-import { getWeekSchedules } from "@/actions/scheduleActions";
-import { getPatients } from "@/actions/patientActions";
-import { getTherapists } from "@/actions/therapistActions";
-import { getProcedures } from "@/actions/procedureActions";
-import { PlanningView } from "@/components/scheduling/PlanningView";
-import { getWeekDays, parseWeekParam } from "@/lib/dateUtils";
+import { getWeekSchedules } from '@\/modules\/scheduling\/actions\/scheduleActions'
+import { getPatients } from '@\/modules\/scheduling\/actions\/patientActions'
+import { getTherapists } from '@\/modules\/scheduling\/actions\/therapistActions'
+import { getProcedures } from '@\/modules\/scheduling\/actions\/procedureActions'
+import { PlanningView } from '@/modules/scheduling/components/PlanningView'
+import { getWeekDays, parseWeekParam } from '@/modules/core/lib/dateUtils'
 
 export default async function PlanovaniPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tyden?: string }>;
+  searchParams: Promise<{ tyden?: string }>
 }) {
-  const params = await searchParams;
-  const weekStart = parseWeekParam(params.tyden ?? null);
-  const weekDays = getWeekDays(weekStart);
+  const params = await searchParams
+  const weekStart = parseWeekParam(params.tyden ?? null)
+  const weekDays = getWeekDays(weekStart)
 
   const [schedules, patients, therapists, procedures] = await Promise.all([
     getWeekSchedules(weekStart),
     getPatients(),
     getTherapists(),
     getProcedures(),
-  ]);
+  ])
 
   return (
     <div>
@@ -33,5 +33,5 @@ export default async function PlanovaniPage({
         procedures={procedures}
       />
     </div>
-  );
+  )
 }

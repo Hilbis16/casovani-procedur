@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { hash } from '@node-rs/argon2'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/modules/core/db/prisma'
 import { checkPermission } from '@/modules/core/rbac'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
 
