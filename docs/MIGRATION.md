@@ -4,6 +4,16 @@ Append-only log: každá Prisma migrace, datum, důvod, rollback postup.
 
 ---
 
+## `20260511180041_phase8_nullable_stayid` — Phase 8 (Modular Tiers)
+
+**Datum:** 2026-05-11
+**Soubor:** `prisma/migrations/20260511180041_phase8_nullable_stayid/migration.sql`
+**Obsah:** `ProcedureSchedule.stayId String` → `String?` (nullable)
+**Důvod:** scheduling-only tier plánuje procedury bez kontextu pobytu; Stay entita není vyžadována
+**Rollback:** Dev — `prisma migrate reset`; Prod — ALTER TABLE `procedure_schedules` ALTER COLUMN `stayId` SET NOT NULL (pouze pokud žádný NULL existuje)
+
+---
+
 ## Wave A — Phase 1 (plánováno)
 
 **Datum:** TBD  

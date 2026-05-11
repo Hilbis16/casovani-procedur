@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { addDays } from 'date-fns'
-import { getPatient } from '@/modules/scheduling/actions/patientActions'
+import { getPatient } from '@/modules/core/actions/patientActions'
 import { getPatientStaySchedules } from '@/modules/scheduling/actions/scheduleActions'
 import { PrintButton } from '@/components/print/PrintButton'
 import { formatCzechFull, sameDay } from '@/modules/core/lib/dateUtils'

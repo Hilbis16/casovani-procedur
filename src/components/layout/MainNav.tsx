@@ -4,25 +4,34 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 
-const NAV_ITEMS = [
-  { href: '/planovani', label: 'Plánování' },
+type NavItem = { href: string; label: string; module?: 'scheduling' | 'hotel' }
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/planovani', label: 'Plánování', module: 'scheduling' },
   { href: '/pacienti', label: 'Pacienti' },
-  { href: '/terapeuti', label: 'Terapeuti' },
-  { href: '/procedury', label: 'Procedury' },
+  { href: '/terapeuti', label: 'Terapeuti', module: 'scheduling' },
+  { href: '/procedury', label: 'Procedury', module: 'scheduling' },
   { href: '/prehled', label: 'Denní přehled' },
-  { href: '/ubytovani', label: 'Ubytování' },
+  { href: '/ubytovani', label: 'Ubytování', module: 'hotel' },
   { href: '/spravce/uzivatele', label: 'Správce' },
 ]
 
-export function MainNav() {
+interface Props {
+  enabledModules: string[]
+}
+
+export function MainNav({ enabledModules }: Props) {
   const pathname = usePathname()
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.module || enabledModules.includes(item.module)
+  )
 
   return (
     <nav className="bg-white border-b border-gray-200 shadow-sm print:hidden">
       <div className="max-w-screen-xl mx-auto px-4 flex items-center gap-8 h-14">
         <span className="font-semibold text-blue-700 text-lg shrink-0">🏥 Lázeňský dům</span>
         <div className="flex gap-1">
-          {NAV_ITEMS.map((item) => {
+          {visibleItems.map((item) => {
             const active = pathname.startsWith(item.href)
             return (
               <Link

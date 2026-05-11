@@ -2,11 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  createPatient,
-  updatePatient,
-  deletePatient,
-} from '@\/modules\/scheduling\/actions\/patientActions'
+import { createPatient, updatePatient, deletePatient } from '@/modules/core/actions/patientActions'
 import type { Patient, Stay } from '@prisma/client'
 import { formatDateParam } from '@\/modules\/core\/lib\/dateUtils'
 

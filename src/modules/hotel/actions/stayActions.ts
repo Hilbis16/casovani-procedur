@@ -2,7 +2,10 @@
 
 import { prisma } from '@/modules/core/db/prisma'
 import { checkPermission } from '@/modules/core/rbac'
+import { isModuleEnabled } from '@/modules/core/features'
 import { revalidatePath } from 'next/cache'
+
+const MODULE_DISABLED = { success: false as const, error: 'Modul ubytování není aktivní' }
 
 export async function createStay(data: {
   patientId: string
@@ -10,6 +13,7 @@ export async function createStay(data: {
   arrivalDate: Date
   departureDate: Date
 }): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  if (!isModuleEnabled('hotel')) return MODULE_DISABLED
   const deny = await checkPermission('patient.write')
   if (deny) return deny
 
@@ -32,6 +36,7 @@ export async function createStay(data: {
 }
 
 export async function getStays() {
+  if (!isModuleEnabled('hotel')) return []
   return prisma.stay.findMany({
     where: { deletedAt: null },
     include: { patient: true, room: true },

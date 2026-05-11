@@ -7,6 +7,7 @@ import { findConflicts } from '@/modules/scheduling/lib/conflictDetection'
 import { addMinutes, formatDateParam } from '@/modules/core/lib/dateUtils'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
 import { checkPermission } from '@/modules/core/rbac'
+import { isModuleEnabled } from '@/modules/core/features'
 
 const ScheduleSchema = z.object({
   patientId: z.string().min(1, 'Pacient je povinný'),
@@ -74,11 +75,15 @@ export async function createSchedule(formData: FormData) {
   const dateObj = new Date(date)
   dateObj.setUTCHours(0, 0, 0, 0)
 
-  const activeStay = await prisma.stay.findFirst({
-    where: { patientId, deletedAt: null },
-    orderBy: { arrivalDate: 'desc' },
-  })
-  if (!activeStay) return { success: false, error: 'Pacient nemá aktivní pobyt' }
+  let stayId: string | null = null
+  if (isModuleEnabled('hotel')) {
+    const activeStay = await prisma.stay.findFirst({
+      where: { patientId, deletedAt: null },
+      orderBy: { arrivalDate: 'desc' },
+    })
+    if (!activeStay) return { success: false, error: 'Pacient nemá aktivní pobyt' }
+    stayId = activeStay.id
+  }
 
   const conflicts = await findConflicts({
     therapistId,
@@ -93,7 +98,7 @@ export async function createSchedule(formData: FormData) {
 
   const schedule = await prisma.procedureSchedule.create({
     data: {
-      stayId: activeStay.id,
+      stayId,
       patientId,
       procedureId,
       therapistId,

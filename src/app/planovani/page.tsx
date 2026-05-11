@@ -1,5 +1,5 @@
 import { getWeekSchedules } from '@\/modules\/scheduling\/actions\/scheduleActions'
-import { getPatients } from '@\/modules\/scheduling\/actions\/patientActions'
+import { getPatients } from '@/modules/core/actions/patientActions'
 import { getTherapists } from '@\/modules\/scheduling\/actions\/therapistActions'
 import { getProcedures } from '@\/modules\/scheduling\/actions\/procedureActions'
 import { PlanningView } from '@/modules/scheduling/components/PlanningView'

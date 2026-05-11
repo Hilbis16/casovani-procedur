@@ -6,6 +6,26 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 
 ---
 
+## [0.9.0] – 2026-05-11 — Phase 8: Modular Tiers
+
+### Přidáno
+
+- **`ENABLED_MODULES` ENV flag** — čárkou oddělený seznam aktivních modulů (`scheduling`, `hotel`); default `"scheduling,hotel"` (backward compat)
+- **`src/modules/core/features/index.ts`** — `isModuleEnabled(mod)` helper sdílený přes všechny moduly
+- **Tři licenční tiery**: scheduling-only (ambulantní), hotel-only (ubytování), full (lázně)
+- **Route guard v `proxy.ts`** — routy vypnutého modulu vrací 404 (`/ubytovani/*` při `hotel` off; `/planovani`, `/procedury`, `/terapeuti` při `scheduling` off)
+- **UI gating v `MainNav`** — navigační položky podmíněně skryté podle `enabledModules` prop předávané ze server layoutu
+
+### Změněno
+
+- **`ProcedureSchedule.stayId`** — `String` → `String?` (nullable); Prisma migrace `20260511180041_phase8_nullable_stayid`
+- **`patientActions.ts`** přesunut `scheduling/actions/` → `core/actions/` — sdílená entita dostupná oběma modulům; `createPatient` podmíněně vytváří Stay jen když hotel modul aktivní
+- **`scheduleActions.createSchedule`** — stayId volitelný; při vypnutém hotel modulu plánuje bez Stay
+- **`stayActions`** — `createStay` a `getStays` vrátí chybu / prázdné pole při vypnutém hotel modulu
+- **`layout.tsx`** — čte `ENABLED_MODULES` a předává jako prop do `MainNav`
+
+---
+
 ## [0.8.1] – 2026-05-11 — Audit bugů Phase 4–7
 
 ### Opraveno

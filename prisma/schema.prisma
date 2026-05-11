@@ -243,7 +243,7 @@ model Procedure {
 // status: planned | confirmed | completed | cancelled | no_show
 model ProcedureSchedule {
   id              String    @id @default(cuid())
-  stayId          String
+  stayId          String?
   patientId       String
   procedureId     String
   therapistId     String
@@ -258,7 +258,7 @@ model ProcedureSchedule {
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
 
-  stay          Stay      @relation(fields: [stayId], references: [id])
+  stay          Stay?     @relation(fields: [stayId], references: [id])
   patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
   procedure     Procedure @relation(fields: [procedureId], references: [id])
   therapist     Therapist @relation(fields: [therapistId], references: [id])

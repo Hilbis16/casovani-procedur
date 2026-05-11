@@ -1,4 +1,4 @@
-import { getPatients } from '@/modules/scheduling/actions/patientActions'
+import { getPatients } from '@/modules/core/actions/patientActions'
 import { getRooms } from '@/modules/hotel/actions/stayActions'
 import { NovyPobytForm } from './NovyPobytForm'
 

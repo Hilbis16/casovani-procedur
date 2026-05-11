@@ -5,12 +5,13 @@ import { z } from 'zod'
 import { prisma } from '@/modules/core/db/prisma'
 import { writeAuditLog } from '@/modules/core/audit/auditLogger'
 import { checkPermission } from '@/modules/core/rbac'
+import { isModuleEnabled } from '@/modules/core/features'
 
 const PatientSchema = z.object({
   firstName: z.string().min(1, 'Jméno je povinné'),
   lastName: z.string().min(1, 'Příjmení je povinné'),
-  arrivalDate: z.string().min(1, 'Datum příjezdu je povinné'),
-  departureDate: z.string().min(1, 'Datum odjezdu je povinné'),
+  arrivalDate: z.string().optional(),
+  departureDate: z.string().optional(),
   note: z.string().optional(),
 })
 
@@ -74,19 +75,22 @@ export async function createPatient(formData: FormData) {
     data: { firstName, lastName, note: note || null },
   })
 
-  const year = new Date().getFullYear()
-  const count = await prisma.stay.count()
-  const code = `${year}-${String(count + 1).padStart(4, '0')}`
+  // Only create Stay when hotel module is enabled and dates are provided
+  if (isModuleEnabled('hotel') && arrivalDate && departureDate) {
+    const year = new Date().getFullYear()
+    const count = await prisma.stay.count()
+    const code = `${year}-${String(count + 1).padStart(4, '0')}`
 
-  await prisma.stay.create({
-    data: {
-      code,
-      patientId: patient.id,
-      arrivalDate: new Date(arrivalDate),
-      departureDate: new Date(departureDate),
-      status: 'planned',
-    },
-  })
+    await prisma.stay.create({
+      data: {
+        code,
+        patientId: patient.id,
+        arrivalDate: new Date(arrivalDate),
+        departureDate: new Date(departureDate),
+        status: 'planned',
+      },
+    })
+  }
 
   await writeAuditLog({
     action: 'patient.create',
@@ -113,7 +117,7 @@ export async function updatePatient(id: string, formData: FormData) {
     data: { firstName, lastName, note: note || null },
   })
 
-  if (arrivalDate && departureDate) {
+  if (isModuleEnabled('hotel') && arrivalDate && departureDate) {
     const activeStay = await prisma.stay.findFirst({
       where: { patientId: id, deletedAt: null },
       orderBy: { arrivalDate: 'desc' },
