@@ -1,18 +1,19 @@
-"use server";
+'use server'
 
-import { revalidatePath } from "next/cache";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+import { prisma } from '@/lib/prisma'
+import { writeAuditLog } from '@/modules/core/audit/auditLogger'
 
 const PatientSchema = z.object({
-  firstName: z.string().min(1, "Jméno je povinné"),
-  lastName: z.string().min(1, "Příjmení je povinné"),
-  roomNumber: z.string().min(1, "Číslo pokoje je povinné"),
+  firstName: z.string().min(1, 'Jméno je povinné'),
+  lastName: z.string().min(1, 'Příjmení je povinné'),
+  roomNumber: z.string().min(1, 'Číslo pokoje je povinné'),
   building: z.string().optional(),
-  arrivalDate: z.string().min(1, "Datum příjezdu je povinné"),
-  departureDate: z.string().min(1, "Datum odjezdu je povinné"),
+  arrivalDate: z.string().min(1, 'Datum příjezdu je povinné'),
+  departureDate: z.string().min(1, 'Datum odjezdu je povinné'),
   note: z.string().optional(),
-});
+})
 
 export async function getPatients(query?: string) {
   return prisma.patient.findMany({
@@ -26,21 +27,22 @@ export async function getPatients(query?: string) {
           ],
         }
       : undefined,
-    orderBy: { lastName: "asc" },
-  });
+    orderBy: { lastName: 'asc' },
+  })
 }
 
 export async function getPatient(id: number) {
-  return prisma.patient.findUnique({ where: { id } });
+  return prisma.patient.findUnique({ where: { id } })
 }
 
 export async function createPatient(formData: FormData) {
-  const raw = Object.fromEntries(formData);
-  const parsed = PatientSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+  const raw = Object.fromEntries(formData)
+  const parsed = PatientSchema.safeParse(raw)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { firstName, lastName, roomNumber, building, arrivalDate, departureDate, note } = parsed.data;
-  await prisma.patient.create({
+  const { firstName, lastName, roomNumber, building, arrivalDate, departureDate, note } =
+    parsed.data
+  const patient = await prisma.patient.create({
     data: {
       firstName,
       lastName,
@@ -50,17 +52,24 @@ export async function createPatient(formData: FormData) {
       departureDate: new Date(departureDate),
       note: note || null,
     },
-  });
-  revalidatePath("/pacienti");
-  return { success: true };
+  })
+  await writeAuditLog({
+    action: 'patient.create',
+    entity: 'Patient',
+    entityId: patient.id,
+    after: { firstName, lastName },
+  })
+  revalidatePath('/pacienti')
+  return { success: true }
 }
 
 export async function updatePatient(id: number, formData: FormData) {
-  const raw = Object.fromEntries(formData);
-  const parsed = PatientSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+  const raw = Object.fromEntries(formData)
+  const parsed = PatientSchema.safeParse(raw)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { firstName, lastName, roomNumber, building, arrivalDate, departureDate, note } = parsed.data;
+  const { firstName, lastName, roomNumber, building, arrivalDate, departureDate, note } =
+    parsed.data
   await prisma.patient.update({
     where: { id },
     data: {
@@ -72,14 +81,21 @@ export async function updatePatient(id: number, formData: FormData) {
       departureDate: new Date(departureDate),
       note: note || null,
     },
-  });
-  revalidatePath("/pacienti");
-  revalidatePath(`/pacienti/${id}`);
-  return { success: true };
+  })
+  await writeAuditLog({
+    action: 'patient.update',
+    entity: 'Patient',
+    entityId: id,
+    after: { firstName, lastName },
+  })
+  revalidatePath('/pacienti')
+  revalidatePath(`/pacienti/${id}`)
+  return { success: true }
 }
 
 export async function deletePatient(id: number) {
-  await prisma.patient.delete({ where: { id } });
-  revalidatePath("/pacienti");
-  return { success: true };
+  await prisma.patient.delete({ where: { id } })
+  await writeAuditLog({ action: 'patient.delete', entity: 'Patient', entityId: id })
+  revalidatePath('/pacienti')
+  return { success: true }
 }

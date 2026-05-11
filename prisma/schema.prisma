@@ -7,6 +7,117 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Auth / User management ──────────────────────────────────────────────────
+
+model Facility {
+  id        String   @id @default(cuid())
+  name      String
+  ico       String?
+  address   String?
+  contact   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("facilities")
+}
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  emailVerifiedAt DateTime?
+  passwordHash    String?
+  fullName        String
+  isActive        Boolean    @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  roles    UserRole[]
+  sessions Session[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  key         String       @unique
+  name        String
+  permissions Permission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id     String @id @default(cuid())
+  roleId String
+  action String
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// Auth.js v5 session (DB strategy)
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// Auth.js v5 verification tokens (email verify / magic link)
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── Audit log (append-only — Postgres trigger blocks UPDATE/DELETE) ──────────
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  actorId    String?
+  actorIp    String?
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  meta       Json?
+  occurredAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([occurredAt])
+  @@index([entity, entityId])
+  @@index([actorId, occurredAt])
+  @@map("audit_logs")
+}
+
+// ─── Clinical domain ─────────────────────────────────────────────────────────
+
 model Patient {
   id            Int      @id @default(autoincrement())
   firstName     String
