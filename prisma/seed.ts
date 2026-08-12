@@ -16,6 +16,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'procedure.read',
     'procedure.write',
     'therapist.read',
+    'prescription.read',
+    'prescription.write',
   ],
   terapeut: [
     'patient.read',
@@ -32,8 +34,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'schedule.write',
     'procedure.read',
     'therapist.read',
+    'prescription.read',
+    'prescription.write',
   ],
-  auditor: ['audit.read'],
+  auditor: ['audit.read', 'prescription.read'],
 }
 
 const ROLE_NAMES: Record<string, string> = {
@@ -100,10 +104,72 @@ async function seedUsers() {
   console.log(`Uživatelé: ${operatorEmail} (recepční), ${adminEmail} (správce)`)
 }
 
+async function seedPrescriptionTemplates(procedureByName: Record<string, string>) {
+  const templates: {
+    name: string
+    description: string
+    items: { name: string; repetitions: number; preferredTime: string; sortOrder: number }[]
+  }[] = [
+    {
+      name: 'Rehabilitace zad',
+      description:
+        'Standardní protokol pro pacienty s bolestmi zad — masáž, reflexní terapie, magnetoterapie.',
+      items: [
+        { name: 'Klasická masáž', repetitions: 5, preferredTime: '09:00', sortOrder: 0 },
+        { name: 'Reflexní masáž', repetitions: 3, preferredTime: '10:30', sortOrder: 1 },
+        { name: 'Magnetoterapie', repetitions: 3, preferredTime: '13:00', sortOrder: 2 },
+      ],
+    },
+    {
+      name: 'Wellness týden',
+      description: 'Relaxační balíček — perličková koupel, klasická masáž, vodoléčba.',
+      items: [
+        { name: 'Perličková koupel', repetitions: 3, preferredTime: '09:30', sortOrder: 0 },
+        { name: 'Klasická masáž', repetitions: 2, preferredTime: '11:00', sortOrder: 1 },
+        { name: 'Vodoléčba', repetitions: 2, preferredTime: '14:00', sortOrder: 2 },
+      ],
+    },
+    {
+      name: 'Pohybový aparát',
+      description: 'Intenzivní protokol pro obnovu pohybového aparátu.',
+      items: [
+        { name: 'Elektroléčba', repetitions: 5, preferredTime: '09:00', sortOrder: 0 },
+        { name: 'Magnetoterapie', repetitions: 3, preferredTime: '10:00', sortOrder: 1 },
+        { name: 'Vodoléčba', repetitions: 2, preferredTime: '13:30', sortOrder: 2 },
+      ],
+    },
+  ]
+
+  for (const tpl of templates) {
+    const template = await prisma.prescriptionTemplate.upsert({
+      where: { name: tpl.name },
+      update: { description: tpl.description, isActive: true },
+      create: { name: tpl.name, description: tpl.description, isActive: true },
+    })
+    await prisma.prescriptionTemplateItem.deleteMany({ where: { templateId: template.id } })
+    await prisma.prescriptionTemplateItem.createMany({
+      data: tpl.items
+        .filter((i) => procedureByName[i.name])
+        .map((i) => ({
+          templateId: template.id,
+          procedureId: procedureByName[i.name],
+          repetitions: i.repetitions,
+          preferredTime: i.preferredTime,
+          sortOrder: i.sortOrder,
+        })),
+    })
+  }
+  console.log(`Šablony předpisů: ${templates.map((t) => t.name).join(', ')}`)
+}
+
 async function main() {
   await seedUsers()
 
   await prisma.procedureSchedule.deleteMany()
+  await prisma.prescriptionItem.deleteMany()
+  await prisma.prescription.deleteMany()
+  await prisma.prescriptionTemplateItem.deleteMany()
+  await prisma.prescriptionTemplate.deleteMany()
   await prisma.stay.deleteMany()
   await prisma.therapistAvailability.deleteMany()
   await prisma.therapistTimeOff.deleteMany()
@@ -115,13 +181,14 @@ async function main() {
 
   // Buildings & rooms
   const buildingA = await prisma.building.create({
-    data: { code: 'A', name: 'Budova A' },
+    data: { code: 'A', name: 'Budova A — léčebná' },
   })
   const buildingB = await prisma.building.create({
-    data: { code: 'B', name: 'Budova B' },
+    data: { code: 'B', name: 'Budova B — balneologická' },
   })
 
   const rooms = await Promise.all([
+    // patient rooms
     prisma.room.create({
       data: { buildingId: buildingA.id, number: '4', floor: 1, kind: 'patient_room' },
     }),
@@ -134,15 +201,26 @@ async function main() {
     prisma.room.create({
       data: { buildingId: buildingB.id, number: '23', floor: 1, kind: 'patient_room' },
     }),
+    // procedure rooms — Budova A
     prisma.room.create({
       data: {
-        buildingId: buildingB.id,
+        buildingId: buildingA.id,
         number: 'M1',
         floor: 0,
         kind: 'procedure_room',
         capacity: 2,
       },
     }),
+    prisma.room.create({
+      data: {
+        buildingId: buildingA.id,
+        number: 'E1',
+        floor: 0,
+        kind: 'procedure_room',
+        capacity: 3,
+      },
+    }),
+    // procedure rooms — Budova B
     prisma.room.create({
       data: {
         buildingId: buildingB.id,
@@ -152,8 +230,28 @@ async function main() {
         capacity: 1,
       },
     }),
+    prisma.room.create({
+      data: {
+        buildingId: buildingB.id,
+        number: 'H1',
+        floor: 0,
+        kind: 'procedure_room',
+        capacity: 1,
+      },
+    }),
+    prisma.room.create({
+      data: {
+        buildingId: buildingB.id,
+        number: 'H2',
+        floor: 0,
+        kind: 'procedure_room',
+        capacity: 1,
+      },
+    }),
   ])
-  // rooms[0]=A/4, [1]=A/7, [2]=A/12, [3]=B/23, [4]=B/M1(proc), [5]=B/M2(proc)
+  // rooms[0]=A/4, [1]=A/7, [2]=A/12, [3]=B/23 (patient)
+  // rooms[4]=A/M1(masáž,cap2), [5]=A/E1(elektro/magneto,cap3)
+  // rooms[6]=B/M2(masáž private,cap1), [7]=B/H1(hydro,cap1), [8]=B/H2(hydro,cap1)
 
   // Therapists
   const therapists = await Promise.all([
@@ -258,41 +356,116 @@ async function main() {
     }),
   ])
 
-  // Procedures
+  // Procedures (with building + room text for print/display)
   const procedures = await Promise.all([
+    // [0] masáž
     prisma.procedure.create({
-      data: { name: 'Klasická masáž', category: 'masaz', durationMin: 60 },
+      data: {
+        name: 'Klasická masáž',
+        category: 'masaz',
+        durationMin: 60,
+        capacity: 1,
+        building: 'Budova A',
+        room: 'M1',
+      },
     }),
+    // [1] hydroterapie
     prisma.procedure.create({
-      data: { name: 'Perličková koupel', category: 'hydroterapie', durationMin: 20 },
+      data: {
+        name: 'Perličková koupel',
+        category: 'hydroterapie',
+        durationMin: 20,
+        capacity: 1,
+        building: 'Budova B',
+        room: 'H1',
+      },
     }),
+    // [2] elektroterapie
     prisma.procedure.create({
-      data: { name: 'Elektroléčba', category: 'elektroterapie', durationMin: 30 },
+      data: {
+        name: 'Elektroléčba',
+        category: 'elektroterapie',
+        durationMin: 30,
+        capacity: 3,
+        building: 'Budova A',
+        room: 'E1',
+      },
     }),
+    // [3] magnetoterapie
     prisma.procedure.create({
-      data: { name: 'Magnetoterapie', category: 'magnetoterapie', durationMin: 20 },
+      data: {
+        name: 'Magnetoterapie',
+        category: 'magnetoterapie',
+        durationMin: 20,
+        capacity: 3,
+        building: 'Budova A',
+        room: 'E1',
+      },
     }),
+    // [4] masáž
     prisma.procedure.create({
-      data: { name: 'Reflexní masáž', category: 'masaz', durationMin: 45 },
+      data: {
+        name: 'Reflexní masáž',
+        category: 'masaz',
+        durationMin: 45,
+        capacity: 1,
+        building: 'Budova A',
+        room: 'M1',
+      },
     }),
+    // [5] hydroterapie
     prisma.procedure.create({
-      data: { name: 'Vodoléčba', category: 'hydroterapie', durationMin: 30 },
+      data: {
+        name: 'Vodoléčba',
+        category: 'hydroterapie',
+        durationMin: 30,
+        capacity: 1,
+        building: 'Budova B',
+        room: 'H2',
+      },
+    }),
+    // [6] masáž — Budova B soukromý kabinet
+    prisma.procedure.create({
+      data: {
+        name: 'Sportovní masáž',
+        category: 'masaz',
+        durationMin: 45,
+        capacity: 1,
+        building: 'Budova B',
+        room: 'M2',
+      },
+    }),
+    // [7] jiné
+    prisma.procedure.create({
+      data: {
+        name: 'Rašelinový zábal',
+        category: 'jine',
+        durationMin: 30,
+        capacity: 1,
+        building: 'Budova B',
+        room: 'H2',
+      },
     }),
   ])
 
-  // Schedules — now require stayId
+  // Schedules — rooms matched to procedure type
+  // rIdx: 4=A/M1(masáž), 5=A/E1(elektro/magneto), 6=B/M2(masáž private), 7=B/H1(hydro), 8=B/H2(hydro)
   const scheduleData = [
-    { pIdx: 0, sIdx: 0, procIdx: 0, tIdx: 0, rIdx: 4, dayOffset: 0, start: '08:00', end: '09:00' },
-    { pIdx: 0, sIdx: 0, procIdx: 3, tIdx: 1, rIdx: 5, dayOffset: 1, start: '09:00', end: '09:20' },
-    { pIdx: 0, sIdx: 0, procIdx: 2, tIdx: 2, rIdx: 4, dayOffset: 2, start: '10:00', end: '10:30' },
-    { pIdx: 0, sIdx: 0, procIdx: 0, tIdx: 0, rIdx: 4, dayOffset: 3, start: '08:00', end: '09:00' },
-    { pIdx: 1, sIdx: 1, procIdx: 1, tIdx: 1, rIdx: 5, dayOffset: 0, start: '09:30', end: '09:50' },
-    { pIdx: 1, sIdx: 1, procIdx: 4, tIdx: 2, rIdx: 4, dayOffset: 1, start: '11:00', end: '11:45' },
-    { pIdx: 1, sIdx: 1, procIdx: 3, tIdx: 0, rIdx: 5, dayOffset: 3, start: '10:00', end: '10:20' },
-    { pIdx: 2, sIdx: 2, procIdx: 2, tIdx: 2, rIdx: 4, dayOffset: 0, start: '11:00', end: '11:30' },
-    { pIdx: 2, sIdx: 2, procIdx: 0, tIdx: 1, rIdx: 5, dayOffset: 2, start: '08:00', end: '09:00' },
-    { pIdx: 3, sIdx: 3, procIdx: 5, tIdx: 0, rIdx: 4, dayOffset: 1, start: '14:00', end: '14:30' },
-    { pIdx: 3, sIdx: 3, procIdx: 3, tIdx: 2, rIdx: 5, dayOffset: 4, start: '09:00', end: '09:20' },
+    { pIdx: 0, sIdx: 0, procIdx: 0, tIdx: 0, rIdx: 4, dayOffset: 0, start: '08:00', end: '09:00' }, // masáž → A/M1
+    { pIdx: 0, sIdx: 0, procIdx: 3, tIdx: 1, rIdx: 5, dayOffset: 1, start: '09:00', end: '09:20' }, // magneto → A/E1
+    { pIdx: 0, sIdx: 0, procIdx: 2, tIdx: 2, rIdx: 5, dayOffset: 2, start: '10:00', end: '10:30' }, // elektro → A/E1
+    { pIdx: 0, sIdx: 0, procIdx: 0, tIdx: 0, rIdx: 4, dayOffset: 3, start: '08:00', end: '09:00' }, // masáž → A/M1
+    { pIdx: 0, sIdx: 0, procIdx: 7, tIdx: 2, rIdx: 8, dayOffset: 4, start: '11:00', end: '11:30' }, // zábal → B/H2
+    { pIdx: 1, sIdx: 1, procIdx: 1, tIdx: 1, rIdx: 7, dayOffset: 0, start: '09:30', end: '09:50' }, // hydro → B/H1
+    { pIdx: 1, sIdx: 1, procIdx: 4, tIdx: 2, rIdx: 4, dayOffset: 1, start: '11:00', end: '11:45' }, // refl.masáž → A/M1
+    { pIdx: 1, sIdx: 1, procIdx: 3, tIdx: 0, rIdx: 5, dayOffset: 3, start: '10:00', end: '10:20' }, // magneto → A/E1
+    { pIdx: 1, sIdx: 1, procIdx: 5, tIdx: 1, rIdx: 8, dayOffset: 4, start: '13:00', end: '13:30' }, // vodoléčba → B/H2
+    { pIdx: 2, sIdx: 2, procIdx: 2, tIdx: 2, rIdx: 5, dayOffset: 0, start: '11:00', end: '11:30' }, // elektro → A/E1
+    { pIdx: 2, sIdx: 2, procIdx: 0, tIdx: 1, rIdx: 4, dayOffset: 2, start: '08:00', end: '09:00' }, // masáž → A/M1
+    { pIdx: 2, sIdx: 2, procIdx: 6, tIdx: 0, rIdx: 6, dayOffset: 3, start: '09:30', end: '10:15' }, // sport.masáž → B/M2
+    { pIdx: 3, sIdx: 3, procIdx: 5, tIdx: 0, rIdx: 8, dayOffset: 1, start: '14:00', end: '14:30' }, // vodoléčba → B/H2
+    { pIdx: 3, sIdx: 3, procIdx: 3, tIdx: 2, rIdx: 5, dayOffset: 4, start: '09:00', end: '09:20' }, // magneto → A/E1
+    { pIdx: 3, sIdx: 3, procIdx: 4, tIdx: 1, rIdx: 4, dayOffset: 2, start: '10:00', end: '10:45' }, // refl.masáž → A/M1
   ]
 
   for (const s of scheduleData) {
@@ -309,6 +482,10 @@ async function main() {
       },
     })
   }
+
+  const procedureByName: Record<string, string> = {}
+  for (const p of procedures) procedureByName[p.name] = p.id
+  await seedPrescriptionTemplates(procedureByName)
 
   console.log('Seed hotov.')
 }

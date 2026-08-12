@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { createPatient, updatePatient, deletePatient } from '@/modules/core/actions/patientActions'
 import type { Patient, Stay } from '@prisma/client'
-import { formatDateParam } from '@\/modules\/core\/lib\/dateUtils'
+import { formatDateParam } from '@/modules/core/lib/dateUtils'
 
 interface Props {
   patient?: Patient
@@ -25,9 +26,12 @@ export function PatientForm({ patient, stay }: Props) {
     startTransition(async () => {
       const result = isEdit ? await updatePatient(patient!.id, fd) : await createPatient(fd)
       if (result.success) {
+        toast.success(isEdit ? 'Pacient upraven' : 'Pacient přidán')
         router.push('/pacienti')
       } else {
-        setError(result.error ?? 'Chyba při ukládání')
+        const msg = result.error ?? 'Chyba při ukládání'
+        setError(msg)
+        toast.error(msg)
       }
     })
   }
@@ -35,8 +39,13 @@ export function PatientForm({ patient, stay }: Props) {
   async function handleDelete() {
     if (!confirm('Opravdu smazat tohoto pacienta? Budou smazány i všechny jeho procedury.')) return
     startTransition(async () => {
-      await deletePatient(patient!.id)
-      router.push('/pacienti')
+      const res = await deletePatient(patient!.id)
+      if (res.success) {
+        toast.success('Pacient smazán')
+        router.push('/pacienti')
+      } else {
+        toast.error('error' in res ? res.error : 'Chyba při mazání')
+      }
     })
   }
 

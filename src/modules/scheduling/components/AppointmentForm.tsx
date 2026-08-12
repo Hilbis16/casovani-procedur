@@ -1,14 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  cancelSeriesFrom,
 } from '@/modules/scheduling/actions/scheduleActions'
 import { START_TIMES, CATEGORIES } from '@/lib/constants'
 import { addMinutes, formatDateParam } from '@/modules/core/lib/dateUtils'
 import type { Patient, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
+
+type SeriesCancelScope = 'from_here' | 'all'
 
 type FullSchedule = ProcedureSchedule & {
   patient: Patient
@@ -128,9 +132,12 @@ export function AppointmentForm({
       const result = isEdit ? await updateSchedule(schedule!.id, fd) : await createSchedule(fd)
 
       if (result.success) {
+        toast.success(isEdit ? 'Termín upraven' : 'Termín vytvořen')
         onSuccess()
       } else {
-        setError(result.error ?? 'Chyba při ukládání')
+        const msg = result.error ?? 'Chyba při ukládání'
+        setError(msg)
+        toast.error(msg)
       }
     })
   }
@@ -138,8 +145,32 @@ export function AppointmentForm({
   async function handleDelete() {
     if (!confirm('Opravdu smazat tuto proceduru?')) return
     startTransition(async () => {
-      await deleteSchedule(schedule!.id)
-      onSuccess()
+      const res = await deleteSchedule(schedule!.id)
+      if (res.success) {
+        toast.success('Termín smazán')
+        onSuccess()
+      } else {
+        toast.error('error' in res ? res.error : 'Chyba při mazání')
+      }
+    })
+  }
+
+  async function handleCancelSeries(scope: SeriesCancelScope) {
+    const msg =
+      scope === 'from_here'
+        ? 'Zrušit všechny termíny série od tohoto dne dále?'
+        : 'Zrušit CELOU sérii (všechny termíny)?'
+    if (!confirm(msg)) return
+    const fromDate = schedule ? formatDateParam(new Date(schedule.date)) : ''
+    startTransition(async () => {
+      const res = await cancelSeriesFrom(schedule!.recurringGroupId!, fromDate, scope)
+      if (res.success) {
+        const skippedNote = res.skipped > 0 ? ` (${res.skipped} vykázaných přeskočeno)` : ''
+        toast.success(`Zrušeno ${res.cancelled} termínů${skippedNote}`)
+        onSuccess()
+      } else {
+        toast.error('error' in res ? res.error : 'Chyba při rušení série')
+      }
     })
   }
 
@@ -306,6 +337,31 @@ export function AppointmentForm({
               placeholder="Nepovinná poznámka..."
             />
           </div>
+
+          {/* Series cancel actions — only shown when editing a recurring schedule */}
+          {isEdit && schedule?.recurringGroupId && (
+            <div className="pt-1 border-t border-gray-100">
+              <p className="text-xs text-gray-400 mb-2">Série opakujících se termínů</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCancelSeries('from_here')}
+                  disabled={isPending}
+                  className="flex-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Zrušit od tohoto dne
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCancelSeries('all')}
+                  disabled={isPending}
+                  className="flex-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Zrušit celou sérii
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-between pt-2">
             {isEdit ? (

@@ -33,13 +33,21 @@ export default async function PacientiPage({
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {patients.length === 0 ? (
-          <div className="py-16 text-center text-gray-400">
-            <p className="text-lg">Žádní pacienti</p>
+          <div className="py-16 px-6 text-center">
+            <div className="text-5xl mb-4">👤</div>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">
+              {q ? `Žádní pacienti pro "${q}"` : 'Zatím tu nejsou žádní pacienti'}
+            </h2>
+            <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+              {q
+                ? 'Zkuste hledání zúžit nebo upravit.'
+                : 'Začněte zaevidováním prvního pacienta. K němu pak můžete přidat pobyt a naplánovat procedury.'}
+            </p>
             <Link
               href="/pacienti/novy"
-              className="mt-2 text-blue-600 text-sm hover:underline block"
+              className="inline-block px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Přidat prvního pacienta →
+              + Přidat pacienta
             </Link>
           </div>
         ) : (

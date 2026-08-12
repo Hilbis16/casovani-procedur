@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import {
   checkRecurringConflicts,
   createRecurringSchedules,
-} from '@\/modules\/scheduling\/actions\/scheduleActions'
+} from '@/modules/scheduling/actions/scheduleActions'
 import { CATEGORIES, DAY_NAMES, START_TIMES } from '@/lib/constants'
-import { formatDateParam, formatCzechFull } from '@\/modules\/core\/lib\/dateUtils'
+import { formatDateParam, formatCzechFull } from '@/modules/core/lib/dateUtils'
 import type { Patient, Stay, Therapist, Procedure } from '@prisma/client'
 
 type PreviewEntry = { date: string; hasConflict: boolean; conflictMessage?: string }
@@ -99,8 +100,13 @@ export function RecurringProcedureForm({
       })
       if (result.success) {
         setSubmitResult({ created: result.created, skipped: result.skipped })
+        toast.success(
+          `Vytvořeno ${result.created} termínů${result.skipped > 0 ? `, přeskočeno ${result.skipped}` : ''}`
+        )
       } else {
-        setError(result.error ?? 'Chyba při vytváření termínů')
+        const msg = result.error ?? 'Chyba při vytváření termínů'
+        setError(msg)
+        toast.error(msg)
       }
     })
   }

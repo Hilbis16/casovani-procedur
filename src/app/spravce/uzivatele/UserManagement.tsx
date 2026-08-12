@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createAdminUser, toggleUserActive } from '@\/modules\/core\/actions\/adminActions'
+import { createAdminUser, toggleUserActive } from '@/modules/core/actions/adminActions'
 
 type User = {
   id: string

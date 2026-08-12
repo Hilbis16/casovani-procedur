@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { createBatchSchedules } from '@/modules/scheduling/actions/scheduleActions'
 import type { Patient, Stay, Therapist, Procedure } from '@prisma/client'
 
@@ -49,7 +50,16 @@ export function StaySchedulePlanner({
   const [isPending, startTransition] = useTransition()
 
   function updateItem(index: number, field: keyof PlanItem, value: string) {
-    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)))
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        const next = { ...item, [field]: value }
+        if (field === 'procedureId' && value && !next.therapistId && therapists[0]) {
+          next.therapistId = therapists[0].id
+        }
+        return next
+      })
+    )
   }
 
   function addItem() {
@@ -86,9 +96,14 @@ export function StaySchedulePlanner({
       })
       if (res.success) {
         setResult({ created: res.created, skipped: res.skipped })
+        toast.success(
+          `Naplánováno ${res.created} procedur${res.skipped > 0 ? `, přeskočeno ${res.skipped}` : ''}`
+        )
         if (res.created > 0) onSuccess()
       } else {
-        setError(res.error ?? 'Chyba při plánování')
+        const msg = res.error ?? 'Chyba při plánování'
+        setError(msg)
+        toast.error(msg)
       }
     })
   }

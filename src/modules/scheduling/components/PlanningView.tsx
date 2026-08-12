@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { Patient, Therapist, Procedure, ProcedureSchedule } from '@prisma/client'
 import { WeeklyGrid } from './WeeklyGrid'
 import { WeekSelector } from './WeekSelector'
-import { sameDay } from '@\/modules\/core\/lib\/dateUtils'
+import { sameDay } from '@/modules/core/lib/dateUtils'
 
 type FullSchedule = ProcedureSchedule & {
   patient: Patient

@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   createTherapist,
   updateTherapist,
   deleteTherapist,
-} from '@\/modules\/scheduling\/actions\/therapistActions'
+} from '@/modules/scheduling/actions/therapistActions'
 import type { Therapist } from '@prisma/client'
 
 const COLORS = [
@@ -42,9 +43,12 @@ export function TherapistForm({ therapist }: Props) {
     startTransition(async () => {
       const result = isEdit ? await updateTherapist(therapist!.id, fd) : await createTherapist(fd)
       if (result.success) {
+        toast.success(isEdit ? 'Terapeut upraven' : 'Terapeut přidán')
         router.push('/terapeuti')
       } else {
-        setError(result.error ?? 'Chyba při ukládání')
+        const msg = result.error ?? 'Chyba při ukládání'
+        setError(msg)
+        toast.error(msg)
       }
     })
   }
@@ -52,8 +56,13 @@ export function TherapistForm({ therapist }: Props) {
   async function handleDelete() {
     if (!confirm('Opravdu smazat tohoto terapeuta?')) return
     startTransition(async () => {
-      await deleteTherapist(therapist!.id)
-      router.push('/terapeuti')
+      const res = await deleteTherapist(therapist!.id)
+      if (res.success) {
+        toast.success('Terapeut smazán')
+        router.push('/terapeuti')
+      } else {
+        toast.error('error' in res ? res.error : 'Chyba při mazání')
+      }
     })
   }
 

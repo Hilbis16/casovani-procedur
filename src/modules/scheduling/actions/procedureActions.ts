@@ -14,6 +14,7 @@ const ProcedureSchema = z.object({
   description: z.string().optional(),
   building: z.string().optional(),
   room: z.string().optional(),
+  insuranceCode: z.string().optional(),
 })
 
 export async function getProcedures() {
@@ -37,7 +38,8 @@ export async function createProcedure(formData: FormData) {
   const parsed = ProcedureSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { name, category, durationMin, capacity, description, building, room } = parsed.data
+  const { name, category, durationMin, capacity, description, building, room, insuranceCode } =
+    parsed.data
   const procedure = await prisma.procedure.create({
     data: {
       name,
@@ -47,6 +49,7 @@ export async function createProcedure(formData: FormData) {
       description: description || null,
       building: building || null,
       room: room || null,
+      insuranceCode: insuranceCode || null,
     },
   })
   await writeAuditLog({
@@ -67,7 +70,8 @@ export async function updateProcedure(id: string, formData: FormData) {
   const parsed = ProcedureSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { name, category, durationMin, capacity, description, building, room } = parsed.data
+  const { name, category, durationMin, capacity, description, building, room, insuranceCode } =
+    parsed.data
   await prisma.procedure.update({
     where: { id },
     data: {
@@ -78,6 +82,7 @@ export async function updateProcedure(id: string, formData: FormData) {
       description: description || null,
       building: building || null,
       room: room || null,
+      insuranceCode: insuranceCode || null,
     },
   })
   await writeAuditLog({

@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from 'next-auth'
 
-const PUBLIC_PATHS = ['/prihlaseni', '/api/auth', '/api/health']
+const PUBLIC_PATHS = ['/prihlaseni', '/api/auth', '/api/health', '/api/cron']
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))

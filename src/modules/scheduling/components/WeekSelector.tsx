@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { addDays } from 'date-fns'
-import { formatCzechDate, formatDateParam } from '@\/modules\/core\/lib\/dateUtils'
+import { formatCzechDate, formatDateParam } from '@/modules/core/lib/dateUtils'
 
 interface Props {
   weekStart: Date

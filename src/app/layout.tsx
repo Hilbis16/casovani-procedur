@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Toaster } from 'sonner'
 import './globals.css'
 import { MainNav } from '@/components/layout/MainNav'
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.className} h-full bg-gray-50 text-gray-900`}>
         <MainNav enabledModules={enabledModules} />
         <main className="max-w-screen-xl mx-auto px-4 py-6">{children}</main>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   )

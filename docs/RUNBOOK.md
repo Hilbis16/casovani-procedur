@@ -102,3 +102,49 @@ UPDATE sessions SET "revokedAt" = now() WHERE "userId" = 'user_id_here';
 4. Spustit: `curl http://test-instance/api/health`
 5. Ručně ověřit: login, vytvoření pacienta, plánování procedury
 6. Zaznamenat výsledek do `docs/incidents/drill-YYYY-MM.md`
+
+---
+
+## 8. Auto-close stale schedules (v0.10+)
+
+Endpoint `POST /api/cron/auto-close-schedules` přepne všechny `ProcedureSchedule` se stavem `planned` a datem v minulosti na `completed`. Audit log dostane záznam `cron.auto_close_schedules` s počtem aktualizovaných řádků.
+
+**Konfigurace:**
+
+```bash
+# 1. Vygenerovat tajný klíč
+openssl rand -base64 32
+
+# 2. Vložit do .env / deploy/.env
+CRON_SECRET=<vygenerovaný-klíč>
+```
+
+**Spouštění — Linux crontab** (denně 23:00):
+
+```cron
+0 23 * * * curl -sS -X POST -H "x-cron-secret: $CRON_SECRET" http://localhost:3002/api/cron/auto-close-schedules >> /var/log/lazenska-cron.log 2>&1
+```
+
+**Spouštění — Windows Task Scheduler:**
+
+```powershell
+# Vytvoření úlohy (jednorázově, jako Admin)
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -Command "Invoke-WebRequest -Method POST -Headers @{\"x-cron-secret\"=$env:CRON_SECRET} -Uri http://localhost:3002/api/cron/auto-close-schedules"'
+$trigger = New-ScheduledTaskTrigger -Daily -At 23:00
+Register-ScheduledTask -TaskName 'lazenska-auto-close' -Action $action -Trigger $trigger -RunLevel Highest
+```
+
+**Ruční spuštění (test / one-shot):**
+
+```bash
+curl -X POST -H "x-cron-secret: $CRON_SECRET" http://localhost:3002/api/cron/auto-close-schedules
+# → {"success":true,"updated":N}
+```
+
+**Návratové kódy:**
+
+- `200` — úspěch, vrátí `{ success, updated }`
+- `401` — chybný nebo chybějící `x-cron-secret` header
+- `500` — `CRON_SECRET` není nastaven v ENV
+
+**Phase 9 plán:** přepnout na pg-boss queue handler beze změny veřejné API smlouvy.

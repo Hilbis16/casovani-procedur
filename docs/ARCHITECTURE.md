@@ -40,16 +40,17 @@ Pravidla jsou vynucena ESLintem (`no-restricted-imports`): Phase 0–3 = warn, P
 
 ## Tech stack
 
-| Vrstva     | Volba                                                 |
-| ---------- | ----------------------------------------------------- |
-| Framework  | Next.js 16 (App Router, Turbopack)                    |
-| UI         | React 19, Tailwind 4, Radix UI                        |
-| ORM        | Prisma 6                                              |
-| Databáze   | PostgreSQL 16                                         |
-| Auth       | Auth.js v5 (JWT strategy, Credentials provider)       |
-| Jobs       | pg-boss (Phase 9+)                                    |
-| Encryption | prisma-field-encryption + `@47ng/cloak` (AES-256-GCM) |
-| Logging    | Pino                                                  |
+| Vrstva        | Volba                                                 |
+| ------------- | ----------------------------------------------------- |
+| Framework     | Next.js 16 (App Router, Turbopack)                    |
+| UI            | React 19, Tailwind 4, Radix UI                        |
+| ORM           | Prisma 6                                              |
+| Databáze      | PostgreSQL 16                                         |
+| Auth          | Auth.js v5 (JWT strategy, Credentials provider)       |
+| Jobs          | pg-boss (Phase 9+)                                    |
+| Encryption    | prisma-field-encryption + `@47ng/cloak` (AES-256-GCM) |
+| Notifications | sonner v2.0.7 (toast, `<Toaster />` v root layoutu)   |
+| Logging       | Pino                                                  |
 
 ## Data flow diagram
 
@@ -146,6 +147,64 @@ V Phase 8: vazba `ProcedureSchedule.stayId` se mění z required na optional.
 | `therapist`             | `ProcedureSchedule` — terapeut má jiný termín ve stejnou dobu | vždy          |
 | `patient`               | `ProcedureSchedule` — pacient má jiný termín ve stejnou dobu  | vždy          |
 | `room`                  | `ProcedureSchedule` — procedurní místnost je obsazena         | vždy          |
+| `procedure_capacity`    | `Procedure.capacity` — souběžný počet pacientů přes capacity  | vždy          |
 | (stay-bound checks)     | obsazenost pokoje pobytem, etc.                               | jen full tier |
 
 Implementace: `src/modules/scheduling/lib/conflictDetection.ts`.
+
+---
+
+## Prescription Planner (v0.10, SE-7)
+
+Lékař vyplní předpis a systém z něj **automaticky rozpočítá celý pobyt** — z 30 min plánování na 3 min.
+
+### Doménový model
+
+```
+PrescriptionTemplate ──< PrescriptionTemplateItem >── Procedure
+                                                         │
+Prescription >── Patient                                 │
+             >── Stay                                    │
+             >── User (doctor)                           │
+             >── PrescriptionTemplate? (volitelná vazba) │
+             ──< PrescriptionItem ─────────────────────────┤
+                          │                              │
+                          └──< ProcedureSchedule ────────┘
+                              (prescriptionItemId nullable)
+```
+
+- `Prescription` = jeden lékařský předpis pro konkrétní pobyt
+- `PrescriptionItem` = jedna procedura v předpisu se `repetitions` (kolikrát během pobytu) a `preferredTime`
+- `PrescriptionTemplate` + `PrescriptionTemplateItem` = znovupoužitelné protokoly (seed: "Rehabilitace zad", "Wellness týden", "Pohybový aparát")
+- Každý vytvořený `ProcedureSchedule` má volitelný `prescriptionItemId` → traceability "tahle procedura vznikla z téhle položky předpisu"
+
+### Algoritmus rozpočtu
+
+Identický se `createBatchSchedules` v `src/modules/scheduling/actions/scheduleActions.ts:349`:
+
+1. Z `Stay.arrivalDate`–`departureDate` vyber všechny pracovní dny (Po–Pá)
+2. Pro každou položku předpisu: `count = min(repetitions, weekdays.length)`, `stride = weekdays.length / count`
+3. Pro každé `i ∈ [0, count)`: `dayIndex = floor(i * stride)` → rovnoměrné rozprostření přes pobyt
+4. Pro každý slot zavolat `findConflicts()` (6 dimenzí); konflikty se neblokují, ale propagují do náhledu
+
+### Flow
+
+1. **Lékař** v kartě pacienta `/pacienti/[id]` klikne **+ Nový předpis** → `/predpis/novy?stayId=…`
+2. Vybere šablonu (nebo začne prázdné) → tabulka položek se předvyplní
+3. Upraví počty / terapeuty / preferované časy
+4. Klik **Náhled rozpočtu** → `previewPrescription()` vrátí navrhované termíny + konflikty
+5. U konfliktního slotu: **Skip** (přeskočit) nebo **Přesunout** → `FreeSlotPopover` s `findFreeSlots()` alternativami
+6. Klik **Vytvořit předpis** → `createPrescription()` v transakci: `Prescription` + `PrescriptionItem`(y) + `ProcedureSchedule.createMany`; audit log entry `prescription.create`; toast success; redirect na `/predpisy/[id]`
+
+### Role v flow
+
+| Role     | Co dělá                                                             | Permissions               |
+| -------- | ------------------------------------------------------------------- | ------------------------- |
+| Lékař    | Tvoří předpisy, viz list                                            | `prescription.write/read` |
+| Recepční | Vidí list `/predpisy`, otvírá detail, ruší předpisy                 | `prescription.write/read` |
+| Auditor  | Read-only přístup k předpisům                                       | `prescription.read`       |
+| Terapeut | Beze změny — vidí denní plán s navázanými procedurami, mění statusy | `schedule.status`         |
+
+### Auto-close stale schedules
+
+`POST /api/cron/auto-close-schedules` (shared secret `CRON_SECRET`) — denně přepne `ProcedureSchedule.status = 'planned'` na `'completed'` pro záznamy s `date < today`. Audit log entry `cron.auto_close_schedules`. Konfigurace v `docs/RUNBOOK.md#8`. Phase 9: bude přesunuto za pg-boss queue beze změny API.

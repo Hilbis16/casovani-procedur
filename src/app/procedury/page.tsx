@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getAllProcedures } from '@\/modules\/scheduling\/actions\/procedureActions'
+import { getAllProcedures } from '@/modules/scheduling/actions/procedureActions'
 import { CATEGORIES } from '@/lib/constants'
 
 export default async function ProceduresPage() {
@@ -58,6 +58,15 @@ export default async function ProceduresPage() {
                         {p.room && <span className="text-gray-700 font-medium">{p.room}</span>}
                         {!p.building && !p.room && <span className="text-gray-300">—</span>}
                       </td>
+                      <td className="px-4 py-3 text-sm">
+                        {p.insuranceCode ? (
+                          <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-700">
+                            {p.insuranceCode}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -84,13 +93,20 @@ export default async function ProceduresPage() {
         ))}
 
         {procedures.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm py-16 text-center text-gray-400">
-            <p className="text-lg">Žádné procedury</p>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm py-16 px-6 text-center">
+            <div className="text-5xl mb-4">💆</div>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">
+              Zatím tu nejsou žádné procedury
+            </h2>
+            <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+              Přidejte procedury (masáže, koupele, elektroléčbu…), nastavte délku a volitelně kód
+              pojišťovny pro výkaz.
+            </p>
             <Link
               href="/procedury/nova"
-              className="mt-2 text-blue-600 text-sm hover:underline block"
+              className="inline-block px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Přidat první proceduru →
+              + Přidat proceduru
             </Link>
           </div>
         )}

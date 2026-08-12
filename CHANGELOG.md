@@ -6,6 +6,66 @@ Všechny poznámkované změny v tomto projektu. Formát je inspirován [Keep a 
 
 ---
 
+## [0.11.2] – 2026-05-15 — SE-5: Recurring series group operations
+
+### Přidáno
+
+- **`recurringGroupId`** — nové pole na `ProcedureSchedule`; všechny termíny vytvořené jedním `createRecurringSchedules` sdílejí stejné UUID
+- **`cancelSeriesFrom(groupId, fromDate, scope)`** — server action pro hromadné zrušení série; `scope = 'from_here'` ruší od zvoleného data dál, `scope = 'all'` ruší celou sérii; vykázané termíny jsou přeskočeny (billedAt lock)
+- **Série tlačítka v `AppointmentForm`** — při editaci termínu, který je součástí série, se zobrazí sekce "Série opakujících se termínů" s tlačítky _Zrušit od tohoto dne_ (amber) a _Zrušit celou sérii_ (red)
+- **Audit log** — `schedule.series_cancel` se zápisem groupId, scope, fromDate, count
+
+### Technické
+
+- Migrace `20260515120000_recurring_group_id` (SQL soubor připraven, čeká na Docker)
+- `prisma generate` provedeno — typy aktualizovány
+
+---
+
+## [0.10.1] – 2026-05-15 — Quick win UX polish
+
+### Přidáno
+
+- **Empty state `/prehled`** — víkendový a prázdný stav má vlastní ikonu (📅), popis situace (víkend / žádné procedury dnes) a 3 CTA (plánování, přidat pacienta, přidat terapeuta)
+- **Empty state `/pacienti`** — vylepšen s ikonou 👤, popisem a inline CTA "+ Přidat pacienta"
+
+### Změněno
+
+- **Toast rollout** — `sonner` toast rozšířen do všech zbývajících formulářů a akcí: `StatusButtons`, `StaySchedulePlanner`, `RecurringProcedureForm`, `AppointmentForm`, `PatientForm`, `TherapistForm`, `ExportPatientButton` (nahrazeny `alert()` / chybějící zpětná vazba uživateli)
+- **Smart default terapeuta** — při výběru procedury v `PrescriptionItemsTable` a `StaySchedulePlanner` se automaticky předvyplní první dostupný terapeut (pokud ještě žádný nevybrán)
+
+### Opraveno
+
+- **Escapované importy (druhý průchod)** — odstraněno ~13 zbývajících výskytů `\/` v import cestách: `TherapistForm`, `PatientForm`, `health/route`, `planovani/page`, `terapeuti/page`, `PlanningView`, `audit/page`, `UserManagement`, `RecurringProcedureForm`, `WeekSelector`, `uzivatele/page`, `role/page`, `procedury/page`
+- **`export const dynamic = 'force-dynamic'`** — přidán na nové stránky `/predpis/novy`, `/predpisy`, `/predpisy/[id]` (Next.js 16 statický prerender fallback při chybějící DB)
+
+---
+
+## [0.10.0] – 2026-05-14 — SE-7: Prescription Planner + auto-close cron + toasty
+
+### Přidáno
+
+- **Prescription Planner (SE-7)** — lékař vyplní předpis ze šablony, systém auto-rozprostře procedury přes pracovní dny pobytu (reuse `createBatchSchedules` stride algoritmu), zobrazí náhled konfliktů, lékař může jednotlivé sloty `Skip` nebo `Přesunout` (popover s `findFreeSlots` alternativami), submit vytvoří `Prescription` + `PrescriptionSchedule` v transakci
+- **4 nové Prisma modely**: `PrescriptionTemplate`, `PrescriptionTemplateItem`, `Prescription`, `PrescriptionItem`; vazba `ProcedureSchedule.prescriptionItemId?` pro tracking původu procedur
+- **3 seed šablony**: "Rehabilitace zad" (5× klasická masáž, 3× reflexní, 3× magnetoterapie), "Wellness týden" (3× perličková koupel, 2× klasická masáž, 2× vodoléčba), "Pohybový aparát" (5× elektroléčba, 3× magnetoterapie, 2× vodoléčba)
+- **Server Actions** v `src/modules/scheduling/actions/prescriptionActions.ts`: `getPrescriptionTemplates`, `previewPrescription`, `createPrescription`, `getPrescriptions`, `getPrescription`, `cancelPrescription`, `getFreeSlotSuggestions`
+- **UI komponenty**: `PrescriptionForm` (orchestrátor 3 kroků), `TemplateSelector`, `PrescriptionItemsTable`, `PrescriptionPreview` (seskupení po dnech, barevné konflikty), `FreeSlotPopover` (datum+terapeut+sloty), `CancelPrescriptionButton`
+- **Stránky**: `/predpis/novy` (lékař, guard `prescription.write`), `/predpisy` (list pro recepční), `/predpisy/[id]` (detail s navázanými procedurami a stornem)
+- **RBAC permissions**: `prescription.read` (lekar, recepcni, auditor), `prescription.write` (lekar, recepcni)
+- **Auto-close cron**: `POST /api/cron/auto-close-schedules` s `CRON_SECRET` shared secret guard, denně přepne `PLANNED→COMPLETED` na proceduráh s `date < today`; audit log entry `cron.auto_close_schedules`
+- **Toast notifikace** — `sonner@2.0.7`, `<Toaster />` v root layoutu, použito v `PrescriptionForm` (success / warning na konflikty / error) a `CancelPrescriptionButton`
+- **Navigace** — položka "Předpisy" v `MainNav` (gated na `scheduling` modul)
+- **Vstupní bod** — tlačítko "+ Nový předpis" v kartě pacienta `/pacienti/[id]` (jen pokud má aktivní pobyt)
+- **Vitest testy** — 8 nových testů pro `previewPrescription` (rovnoměrné rozprostření, propagace konfliktů, skip/move adjustments, edge cases)
+- **`CRON_SECRET`** v `.env.example` + sekce **8. Auto-close stale schedules** v `docs/RUNBOOK.md` (Linux crontab + Windows Task Scheduler)
+
+### Změněno
+
+- **`ProcedureSchedule`** — přidán nullable `prescriptionItemId` + index
+- **Prisma migrace** `20260514120000_prescription_planner`
+
+---
+
 ## [0.9.0] – 2026-05-11 — Phase 8: Modular Tiers
 
 ### Přidáno

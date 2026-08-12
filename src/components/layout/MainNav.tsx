@@ -9,9 +9,12 @@ type NavItem = { href: string; label: string; module?: 'scheduling' | 'hotel' }
 const NAV_ITEMS: NavItem[] = [
   { href: '/planovani', label: 'Plánování', module: 'scheduling' },
   { href: '/pacienti', label: 'Pacienti' },
+  { href: '/predpisy', label: 'Předpisy', module: 'scheduling' },
   { href: '/terapeuti', label: 'Terapeuti', module: 'scheduling' },
   { href: '/procedury', label: 'Procedury', module: 'scheduling' },
   { href: '/prehled', label: 'Denní přehled' },
+  { href: '/statistiky', label: 'Statistiky', module: 'scheduling' },
+  { href: '/vykaz', label: 'Výkaz', module: 'scheduling' },
   { href: '/ubytovani', label: 'Ubytování', module: 'hotel' },
   { href: '/spravce/uzivatele', label: 'Správce' },
 ]

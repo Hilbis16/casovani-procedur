@@ -32,9 +32,10 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  roles     UserRole[]
-  sessions  Session[]
-  auditLogs AuditLog[]
+  roles         UserRole[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+  prescriptions Prescription[]
 
   @@map("users")
 }
@@ -115,9 +116,9 @@ model AuditLog {
 // ─── Clinical domain (Wave B) ─────────────────────────────────────────────────
 
 model Building {
-  id    String @id @default(cuid())
-  code  String @unique
-  name  String
+  id   String @id @default(cuid())
+  code String @unique
+  name String
 
   rooms Room[]
 
@@ -153,8 +154,9 @@ model Patient {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  stays     Stay[]
-  schedules ProcedureSchedule[]
+  stays         Stay[]
+  schedules     ProcedureSchedule[]
+  prescriptions Prescription[]
 
   @@index([deletedAt])
   @@index([lastName])
@@ -174,9 +176,10 @@ model Stay {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  patient   Patient             @relation(fields: [patientId], references: [id])
-  room      Room?               @relation(fields: [roomId], references: [id])
-  schedules ProcedureSchedule[]
+  patient       Patient             @relation(fields: [patientId], references: [id])
+  room          Room?               @relation(fields: [roomId], references: [id])
+  schedules     ProcedureSchedule[]
+  prescriptions Prescription[]
 
   @@index([patientId, status])
   @@index([deletedAt])
@@ -193,9 +196,10 @@ model Therapist {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  availabilities TherapistAvailability[]
-  timeOffs       TherapistTimeOff[]
-  schedules      ProcedureSchedule[]
+  availabilities    TherapistAvailability[]
+  timeOffs          TherapistTimeOff[]
+  schedules         ProcedureSchedule[]
+  prescriptionItems PrescriptionItem[]
 
   @@map("therapists")
 }
@@ -226,49 +230,153 @@ model TherapistTimeOff {
 }
 
 model Procedure {
-  id          String  @id @default(cuid())
-  name        String
-  category    String
-  durationMin Int
-  description String?
-  room        String?
-  building    String?
-  isActive    Boolean @default(true)
-  capacity    Int     @default(1)
+  id            String  @id @default(cuid())
+  name          String
+  category      String
+  durationMin   Int
+  description   String?
+  room          String?
+  building      String?
+  isActive      Boolean @default(true)
+  capacity      Int     @default(1)
+  insuranceCode String?
 
-  schedules ProcedureSchedule[]
+  schedules         ProcedureSchedule[]
+  templateItems     PrescriptionTemplateItem[]
+  prescriptionItems PrescriptionItem[]
 
   @@map("procedures")
 }
 
 // status: planned | confirmed | completed | cancelled | no_show
 model ProcedureSchedule {
-  id              String    @id @default(cuid())
-  stayId          String?
-  patientId       String
-  procedureId     String
-  therapistId     String
-  procedureRoomId String?
-  date            DateTime
-  startTime       String
-  endTime         String
+  id                 String    @id @default(cuid())
+  stayId             String?
+  patientId          String
+  procedureId        String
+  therapistId        String
+  procedureRoomId    String?
+  prescriptionItemId String?
+  billingPeriodId    String?
+  recurringGroupId   String?
+  date               DateTime
+  startTime          String
+  endTime            String
   /// @encrypted
-  note            String?
-  status          String    @default("planned")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
+  note               String?
+  status             String    @default("planned")
+  billedAt           DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
 
-  stay          Stay?     @relation(fields: [stayId], references: [id])
-  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  procedure     Procedure @relation(fields: [procedureId], references: [id])
-  therapist     Therapist @relation(fields: [therapistId], references: [id])
-  procedureRoom Room?     @relation(fields: [procedureRoomId], references: [id])
+  stay             Stay?             @relation(fields: [stayId], references: [id])
+  patient          Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  procedure        Procedure         @relation(fields: [procedureId], references: [id])
+  therapist        Therapist         @relation(fields: [therapistId], references: [id])
+  procedureRoom    Room?             @relation(fields: [procedureRoomId], references: [id])
+  prescriptionItem PrescriptionItem? @relation(fields: [prescriptionItemId], references: [id])
+  billingPeriod    BillingPeriod?    @relation(fields: [billingPeriodId], references: [id])
 
   @@index([patientId, date])
   @@index([therapistId, date])
   @@index([procedureRoomId, date])
   @@index([stayId])
+  @@index([prescriptionItemId])
+  @@index([billingPeriodId])
+  @@index([recurringGroupId])
   @@index([deletedAt])
   @@map("procedure_schedules")
+}
+
+// ─── Billing / SE-2 ──────────────────────────────────────────────────────────
+
+// status: open | submitted | locked
+model BillingPeriod {
+  id          String    @id @default(cuid())
+  year        Int
+  month       Int
+  status      String    @default("open")
+  notes       String?
+  submittedAt DateTime?
+  lockedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  schedules ProcedureSchedule[]
+
+  @@unique([year, month])
+  @@map("billing_periods")
+}
+
+// ─── Prescription planner (SE-7) ──────────────────────────────────────────────
+
+model PrescriptionTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items         PrescriptionTemplateItem[]
+  prescriptions Prescription[]
+
+  @@map("prescription_templates")
+}
+
+model PrescriptionTemplateItem {
+  id            String @id @default(cuid())
+  templateId    String
+  procedureId   String
+  repetitions   Int    @default(1)
+  preferredTime String @default("09:00")
+  sortOrder     Int    @default(0)
+
+  template  PrescriptionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  procedure Procedure            @relation(fields: [procedureId], references: [id])
+
+  @@index([templateId])
+  @@map("prescription_template_items")
+}
+
+model Prescription {
+  id         String    @id @default(cuid())
+  stayId     String
+  patientId  String
+  doctorId   String
+  templateId String?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  stay     Stay                  @relation(fields: [stayId], references: [id])
+  patient  Patient               @relation(fields: [patientId], references: [id])
+  doctor   User                  @relation(fields: [doctorId], references: [id])
+  template PrescriptionTemplate? @relation(fields: [templateId], references: [id])
+  items    PrescriptionItem[]
+
+  @@index([stayId])
+  @@index([patientId])
+  @@index([deletedAt])
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  id                    String  @id @default(cuid())
+  prescriptionId        String
+  procedureId           String
+  therapistId           String?
+  repetitions           Int
+  preferredTime         String  @default("09:00")
+  createdSchedulesCount Int     @default(0)
+
+  prescription Prescription        @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  procedure    Procedure           @relation(fields: [procedureId], references: [id])
+  therapist    Therapist?          @relation(fields: [therapistId], references: [id])
+  schedules    ProcedureSchedule[]
+
+  @@index([prescriptionId])
+  @@map("prescription_items")
 }

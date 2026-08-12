@@ -18,6 +18,7 @@ export default function UpravitProceduraPage() {
   const [description, setDescription] = useState('')
   const [building, setBuilding] = useState('')
   const [room, setRoom] = useState('')
+  const [insuranceCode, setInsuranceCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
@@ -33,6 +34,7 @@ export default function UpravitProceduraPage() {
         setDescription(p.description ?? '')
         setBuilding(p.building ?? '')
         setRoom(p.room ?? '')
+        setInsuranceCode(p.insuranceCode ?? '')
       }
       setLoading(false)
     })
@@ -164,6 +166,18 @@ export default function UpravitProceduraPage() {
             onChange={(e) => setDescription(e.target.value)}
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Kód pojišťovny</label>
+          <input
+            name="insuranceCode"
+            value={insuranceCode}
+            onChange={(e) => setInsuranceCode(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="např. A1001"
+          />
+          <p className="text-xs text-gray-400 mt-1">Vyplňte pro výkaz VZP / ZPMV</p>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

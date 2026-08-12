@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {
   getAllTherapists,
   toggleTherapistActive,
-} from '@\/modules\/scheduling\/actions\/therapistActions'
+} from '@/modules/scheduling/actions/therapistActions'
 
 export default async function TerapeutiPage() {
   const therapists = await getAllTherapists()
@@ -21,13 +21,20 @@ export default async function TerapeutiPage() {
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {therapists.length === 0 ? (
-          <div className="py-16 text-center text-gray-400">
-            <p className="text-lg">Žádní terapeuti</p>
+          <div className="py-16 px-6 text-center">
+            <div className="text-5xl mb-4">🧑‍⚕️</div>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">
+              Zatím tu nejsou žádní terapeuti
+            </h2>
+            <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+              Přidejte terapeuta, přiřaďte mu pracovní hodiny a barvu v kalendáři. Pak mu bude možné
+              přidělovat procedury.
+            </p>
             <Link
               href="/terapeuti/novy"
-              className="mt-2 text-blue-600 text-sm hover:underline block"
+              className="inline-block px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Přidat prvního terapeuta →
+              + Přidat terapeuta
             </Link>
           </div>
         ) : (

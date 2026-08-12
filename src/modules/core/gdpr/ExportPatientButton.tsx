@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import { toast } from 'sonner'
 import { exportPatientData } from '@/modules/core/gdpr/actions'
 
 export function ExportPatientButton({ patientId }: { patientId: string }) {
@@ -10,7 +11,7 @@ export function ExportPatientButton({ patientId }: { patientId: string }) {
     startTransition(async () => {
       const result = await exportPatientData(patientId)
       if (!result.success) {
-        alert('Chyba: ' + result.error)
+        toast.error(`Chyba exportu: ${result.error}`)
         return
       }
       const bytes = Uint8Array.from(atob(result.pdfBase64), (c) => c.charCodeAt(0))
@@ -23,6 +24,7 @@ export function ExportPatientButton({ patientId }: { patientId: string }) {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      toast.success('PDF s daty pacienta staženo')
     })
   }
 

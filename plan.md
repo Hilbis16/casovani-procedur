@@ -1,14 +1,14 @@
 # Stav projektu – živý tracker
 
-Poslední aktualizace: 2026-05-11
+Poslední aktualizace: 2026-05-15
 
 ---
 
 ## Aktuální stav
 
-**Branch:** `feature/phase-1-auth`
-**Poslední tag:** `v0.4.0` (tagy v0.5.0–v0.8.1 dosud nevytvořeny)
-**DB:** PostgreSQL 16 v Dockeru (port 5435) — migrace `20260511125322_init`, seed OK
+**Branch:** `feature/phase-8-modular-tiers`
+**Poslední tag:** `v0.4.0` (tagy v0.5.0–v0.10.0 dosud nevytvořeny)
+**DB:** PostgreSQL 16 v Dockeru (port 5435) — poslední migrace `20260514120000_prescription_planner`
 **CI:** GitHub Actions workflow připraven (`.github/workflows/ci.yml`)
 
 ### Co funguje
@@ -22,8 +22,17 @@ Poslední aktualizace: 2026-05-11
 - **Phase 5**: Field-level encryption (`Patient.note`, `ProcedureSchedule.note`) via `prisma-field-encryption` + `@47ng/cloak`
 - **Phase 6**: GDPR — stránka zásad, SAR export (PDF ke stažení), `ExportPatientButton` v pobytu pacienta
 - **Phase 7**: Hotel modul skeleton — `/ubytovani` přehled, `/ubytovani/novy` formulář, `stayActions`
+- **Phase 8**: Modular Tiers — `ENABLED_MODULES` flag, nullable `stayId`, route guard, UI gating
+- **SE-6**: Suggest free slots — `findFreeSlots()` s 15min kroky + inline návrhy při konfliktu
+- **SE-8**: Per-therapist daily print — `/terapeuti/[id]/tisk`, `getDaySchedules()`
+- **SE-7**: Prescription Planner — šablony předpisů, auto-rozprostření přes pobyt, náhled konfliktů, Skip/Přesunout, recepční list `/predpisy` + detail se stornem
+- **Auto-close cron** — `POST /api/cron/auto-close-schedules` přepne staré PLANNED → COMPLETED
+- **Toast rollout** — `sonner@2.0.7` ve všech formulářích a akcích: `PrescriptionForm`, `CancelPrescriptionButton`, `StatusButtons`, `AppointmentForm`, `RecurringProcedureForm`, `StaySchedulePlanner`, `PatientForm`, `TherapistForm`, `ExportPatientButton`
+- **Smart default terapeuta** — `PrescriptionItemsTable` + `StaySchedulePlanner` auto-vyplní prvního terapeuta při výběru procedury
+- **Empty states** — `/prehled` (víkend/prázdný, 3 CTA), `/pacienti` (ikona + popis + CTA)
+- **Escape import fix (2. průchod)** — odstraněno zbývajících ~13 výskytů `\/` v import cestách
 - ESLint + Prettier + Husky (pre-commit hook)
-- Vitest — **13/13 testů** (conflictDetection)
+- Vitest — **21/21 testů** (conflictDetection 13 + prescriptionActions 8)
 - `npm run lint` ✅ | `npm run typecheck` ✅ | `npm test` ✅
 
 ### Dev prostředí — spuštění
@@ -37,63 +46,46 @@ npm run dev                                              # App → http://localh
 
 ## In progress
 
-Nic — Phases 0–7 + bug fixy uzavřeny.
+Nic — Phases 0–8 + SE-6/7/8 + quick win UX polish uzavřeny.
 
 ---
 
-## Next up → Phase 8 — Modular Tiers
+## Next up → Phase 9 — Production hardening
 
-**Větev:** vytvořit `feature/phase-8-modular-tiers`
-**Cíl:** Aplikace lze provozovat ve třech tier-ech:
+**Větev:** `feature/phase-9-production`
+**Cíl:** Aplikace připravena pro produkční nasazení — rate limiting, background jobs, monitoring, Playwright e2e.
 
-1. **scheduling-only** — jen ambulantní plánování (bez pobytů)
-2. **hotel-only** — jen ubytování
-3. **full** — kombinace obou (premium balíček)
+### Klíčové položky
 
-### Klíčová rozhodnutí
-
-- **Flag**: ENV proměnná `ENABLED_MODULES="scheduling,hotel"` v `.env` (jedna instance = jeden zákazník)
-- **`ProcedureSchedule.stayId` → nullable** — scheduling-only tier plánuje rovnou na pacienta bez kontextu pobytu
-- **`Patient` přesun do `core`** — sdílená entita, oba moduly ji potřebují (hotel-only tier musí umět zakládat pacienty bez scheduling)
-- **`core/contracts/` zůstane prázdná** — když je `stayId` nullable a Patient v core, scheduling nepotřebuje sahat do hotelu
-
-### Kroky
-
-| #   | Krok                                                                         | Soubory                                                                                                   | Riziko  |
-| --- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------- |
-| 1   | DB migrace: `ProcedureSchedule.stayId` → `String?` nullable                  | `prisma/schema.prisma` + nová migrace                                                                     | Nízké   |
-| 2   | Přesun Patient do core                                                       | `scheduling/actions/patientActions.ts` → `core/actions/`; update ~15 importů                              | Střední |
-| 3   | Feature flag modul `core/features/index.ts`                                  | nový soubor; čte `process.env.ENABLED_MODULES`                                                            | Nízké   |
-| 4   | `.env` + `.env.example` rozšířit o `ENABLED_MODULES`                         | konfigurace                                                                                               | Nízké   |
-| 5   | Route guard v `proxy.ts`                                                     | `/ubytovani/*` 404 když hotel off; `/planovani`,`/procedury` 404 když scheduling off                      | Nízké   |
-| 6   | UI gating v `MainNav.tsx`                                                    | conditional nav items                                                                                     | Nízké   |
-| 7   | Scheduling bez Stay                                                          | `AppointmentForm`, `RecurringProcedureForm`: `stayId` optional; když hotel off → formulář pobyt nezobrazí | Střední |
-| 8   | Server Action guards                                                         | každá hotel action zkontroluje `isModuleEnabled('hotel')`, scheduling stejně                              | Nízké   |
-| 9   | RBAC: nové permissions `module:hotel`, `module:scheduling`                   | seed v `prisma/seed.ts`                                                                                   | Nízké   |
-| 10  | Conflict detection: ignorovat `stayId` když je `null`                        | `scheduling/lib/conflictDetection.ts`                                                                     | Nízké   |
-| 11  | Testy + update `docs/ARCHITECTURE.md` + `CHANGELOG.md` + `docs/MIGRATION.md` | testy, docs                                                                                               | Nízké   |
-| 12  | Tag `v0.9.0`                                                                 | git                                                                                                       | Nízké   |
-
-**DoD:** lze provozovat instanci jen s `ENABLED_MODULES="scheduling"` (hotel routy 404, nav skrývá Ubytování, planování bez pobytu funguje); stejně s `ENABLED_MODULES="hotel"` (scheduling routy 404, pacienti+pobyty funguje); default `"scheduling,hotel"` zachovává backward compat.
+| #   | Co                                                                        | Riziko  |
+| --- | ------------------------------------------------------------------------- | ------- |
+| 1   | **pg-boss** — background jobs (přesunout auto-close cron)                 | Střední |
+| 2   | **Rate limiting** — middleware pro API routes (auth + cron endpointy)     | Nízké   |
+| 3   | **pgBackRest** config v docker-compose.prod.yml                           | Nízké   |
+| 4   | **Health endpoint** — rozšíření `/api/health` o DB latency + queue status | Nízké   |
+| 5   | **Playwright e2e** — login flow + prescription wizard smoke test          | Střední |
+| 6   | **Prisma 7 migrace** — `prisma.config.ts`, URL přesun                     | Střední |
+| 7   | **Mobile UI** — WeeklyGrid responzivita (MVP audit #7)                    | Nízké   |
+| 8   | **SE-2** Status workflow / **SE-4** Drag & drop reschedule                | Vysoké  |
 
 ---
 
 ## Backlog (Compliance proud)
 
-| Phase | Co                                                                                     | Status     |
-| ----- | -------------------------------------------------------------------------------------- | ---------- |
-| 0     | Foundation (ESLint, Prettier, Vitest, CI, PostgreSQL)                                  | ✅ Hotovo  |
-| 1     | Auth + audit + security headers                                                        | ✅ Hotovo  |
-| 2     | RBAC (admin/lekar/terapeut/recepcni/auditor)                                           | ✅ Hotovo  |
-| 3     | Schema Wave B: Stay, Room, Building, soft-delete, indexy, conflict detection rozšíření | ✅ Hotovo  |
-| 4     | Modularizace do `src/modules/{core,scheduling,hotel,reporting}`                        | ✅ Hotovo  |
-| 5     | Field-level encryption (Patient.note, Schedule.note)                                   | ✅ Hotovo  |
-| 6     | GDPR UX (SAR export PDF, privacy policy, ExportPatientButton)                          | ✅ Hotovo  |
-| 7     | Hotel modul skeleton (`/ubytovani`, `/ubytovani/novy`)                                 | ✅ Hotovo  |
-| **8** | **Modular Tiers (ENABLED_MODULES flag, nullable stayId, Patient v core)**              | **Next**   |
-| 9     | Production hardening (rate limiting, pg-boss, pgBackRest, health)                      | Nespuštěno |
-| 10    | Deployment templates (docker-compose.prod, Caddy, INSTALL.md)                          | Nespuštěno |
-| 11    | Fleet management & operator tooling                                                    | Nespuštěno |
+| Phase | Co                                                                                     | Status        |
+| ----- | -------------------------------------------------------------------------------------- | ------------- |
+| 0     | Foundation (ESLint, Prettier, Vitest, CI, PostgreSQL)                                  | ✅ Hotovo     |
+| 1     | Auth + audit + security headers                                                        | ✅ Hotovo     |
+| 2     | RBAC (admin/lekar/terapeut/recepcni/auditor)                                           | ✅ Hotovo     |
+| 3     | Schema Wave B: Stay, Room, Building, soft-delete, indexy, conflict detection rozšíření | ✅ Hotovo     |
+| 4     | Modularizace do `src/modules/{core,scheduling,hotel,reporting}`                        | ✅ Hotovo     |
+| 5     | Field-level encryption (Patient.note, Schedule.note)                                   | ✅ Hotovo     |
+| 6     | GDPR UX (SAR export PDF, privacy policy, ExportPatientButton)                          | ✅ Hotovo     |
+| 7     | Hotel modul skeleton (`/ubytovani`, `/ubytovani/novy`)                                 | ✅ Hotovo     |
+| **8** | **Modular Tiers (ENABLED_MODULES flag, nullable stayId, Patient v core)**              | **✅ Hotovo** |
+| 9     | Production hardening (rate limiting, pg-boss, pgBackRest, health)                      | Nespuštěno    |
+| 10    | Deployment templates (docker-compose.prod, Caddy, INSTALL.md)                          | Nespuštěno    |
+| 11    | Fleet management & operator tooling                                                    | Nespuštěno    |
 
 ---
 
@@ -101,16 +93,16 @@ Nic — Phases 0–7 + bug fixy uzavřeny.
 
 Compliance proud řeší, **aby aplikace SMĚLA běžet** v zdravotnickém zařízení. SE proud řeší, **proč si ji lázně KOUPÍ** — kvalita core domain.
 
-| #    | Co                               | Business value                                                            | Effort    |
+| #    | Co                               | Business value                                                            | Status    |
 | ---- | -------------------------------- | ------------------------------------------------------------------------- | --------- |
-| SE-1 | Conflict detection v2            | ✅ implementováno v Phase 3 (5 dimenzí)                                   | —         |
-| SE-2 | Status workflow (5 stavů + akce) | Vykazování pojišťovně má jasná data                                       | 3–5 dní   |
-| SE-3 | Capacity & vytíženost dashboard  | Manažerka optimalizuje směny na základě dat                               | 1 týden   |
-| SE-4 | Drag & drop reschedule v gridu   | Recepční ušetří ~10 min/den drobnými přesuny                              | 1 týden   |
-| SE-5 | Recurring série group operations | Změny celé série (odjezd, výměna terapeuta) triviální                     | 1 týden   |
-| SE-6 | Suggest free slots               | Auto-řešení kolizí — recepční nehledá ručně                               | 1 týden   |
-| SE-7 | **Prescription planner**         | **30 min → 3 min plánování pobytu z předpisu. Hlavní prodejní argument.** | 2–3 týdny |
-| SE-8 | Per-therapist daily print        | Terapeuti vědí ráno co dělat — méně chaosu                                | 3–5 dní   |
+| SE-1 | Conflict detection v2            | ✅ implementováno v Phase 3 (5 dimenzí)                                   | ✅ Hotovo |
+| SE-2 | Status workflow (5 stavů + akce) | Vykazování pojišťovně má jasná data                                       | ⏳ TODO   |
+| SE-3 | Capacity & vytíženost dashboard  | Manažerka optimalizuje směny na základě dat                               | ⏳ TODO   |
+| SE-4 | Drag & drop reschedule v gridu   | Recepční ušetří ~10 min/den drobnými přesuny                              | ⏳ TODO   |
+| SE-5 | Recurring série group operations | Změny celé série (odjezd, výměna terapeuta) triviální                     | ⏳ TODO   |
+| SE-6 | Suggest free slots               | Auto-řešení kolizí — recepční nehledá ručně                               | ✅ Hotovo |
+| SE-7 | **Prescription planner**         | **30 min → 3 min plánování pobytu z předpisu. Hlavní prodejní argument.** | ✅ Hotovo |
+| SE-8 | Per-therapist daily print        | Terapeuti vědí ráno co dělat — méně chaosu                                | ✅ Hotovo |
 
 Detailní specifikace jednotlivých SE položek byla v původním `ToDO.md` (souhrnný popis výše stačí pro plánování; implementační detaily si dohledáme až při zadávání konkrétního ticketu).
 
@@ -138,8 +130,8 @@ Detailní specifikace jednotlivých SE položek byla v původním `ToDO.md` (sou
 | 5   | Stav procedury nelze měnit z UI                | Phase 3 | ✅                  |
 | 6   | Redundantní `/pacienti/[id]`                   | Phase 3 | ✅                  |
 | 7   | WeeklyGrid není responzivní                    | Phase 9 | ⏳                  |
-| 8   | Chybí toast notifikace                         | Phase 9 | ⏳                  |
+| 8   | Chybí toast notifikace                         | v0.10.x | ✅                  |
 | 9   | Export není implementován                      | Phase 6 | ✅ (PDF SAR export) |
 | 10  | Opakující se procedury nelze editovat          | SE-5    | ⏳                  |
-| 11  | Prázdný stav `/prehled`                        | Phase 9 | ⏳                  |
+| 11  | Prázdný stav `/prehled`                        | v0.10.1 | ✅                  |
 | 12  | Validace dat pobytu (checkin > checkout)       | Phase 3 | ✅                  |

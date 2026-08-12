@@ -24,6 +24,7 @@ function revalidateAll() {
   revalidatePath('/planovani')
   revalidatePath('/pacienti')
   revalidatePath('/terapeuti')
+  revalidatePath('/prehled')
 }
 
 export async function getWeekSchedules(weekStart: Date) {
@@ -173,6 +174,14 @@ export async function updateScheduleStatus(id: string, status: string) {
   const deny = await checkPermission('schedule.status')
   if (deny) return deny
 
+  const existing = await prisma.procedureSchedule.findUnique({
+    where: { id },
+    select: { billedAt: true },
+  })
+  if (existing?.billedAt) {
+    return { success: false as const, error: 'Procedura je vykázána – stav nelze měnit' }
+  }
+
   await prisma.procedureSchedule.update({ where: { id }, data: { status } })
   await writeAuditLog({
     action: 'schedule.status_change',
@@ -182,6 +191,52 @@ export async function updateScheduleStatus(id: string, status: string) {
   })
   revalidateAll()
   return { success: true }
+}
+
+export async function moveSchedule(
+  id: string,
+  newDate: Date,
+  newStartTime: string,
+  durationMin: number
+) {
+  const deny = await checkPermission('schedule.write')
+  if (deny) return deny
+
+  const existing = await prisma.procedureSchedule.findUnique({
+    where: { id },
+    select: { patientId: true, procedureId: true, therapistId: true, billedAt: true },
+  })
+  if (!existing) return { success: false as const, error: 'Procedura nenalezena' }
+  if (existing.billedAt) {
+    return { success: false as const, error: 'Vykázaná procedura nelze přesunout' }
+  }
+
+  const newEndTime = addMinutes(newStartTime, durationMin)
+  const dateObj = new Date(newDate)
+  dateObj.setUTCHours(0, 0, 0, 0)
+
+  const conflicts = await findConflicts({
+    therapistId: existing.therapistId,
+    patientId: existing.patientId,
+    procedureId: existing.procedureId,
+    date: dateObj,
+    startTime: newStartTime,
+    endTime: newEndTime,
+    excludeScheduleId: id,
+  })
+
+  await prisma.procedureSchedule.update({
+    where: { id },
+    data: { date: dateObj, startTime: newStartTime, endTime: newEndTime },
+  })
+  await writeAuditLog({
+    action: 'schedule.move',
+    entity: 'ProcedureSchedule',
+    entityId: id,
+    after: { date: dateObj.toISOString().slice(0, 10), startTime: newStartTime },
+  })
+  revalidateAll()
+  return { success: true as const, conflicts }
 }
 
 export async function deleteSchedule(id: string) {
@@ -291,11 +346,14 @@ export async function createRecurringSchedules(data: {
 
   const endTime = addMinutes(startTime, procedure.durationMin)
 
+  const recurringGroupId = crypto.randomUUID()
+
   const toCreate: {
     stayId: string
     patientId: string
     procedureId: string
     therapistId: string
+    recurringGroupId: string
     date: Date
     startTime: string
     endTime: string
@@ -326,6 +384,7 @@ export async function createRecurringSchedules(data: {
           patientId,
           procedureId,
           therapistId,
+          recurringGroupId,
           date: new Date(cur),
           startTime,
           endTime,
@@ -441,4 +500,61 @@ export async function getDaySchedules(date: Date) {
     include: { patient: true, procedure: true, therapist: true },
     orderBy: [{ therapistId: 'asc' }, { startTime: 'asc' }],
   })
+}
+
+// SE-5: cancel an entire recurring series (or all from a given date forward)
+// scope 'from_here' → only date >= fromDate; scope 'all' → entire series
+// Only cancels planned/confirmed; skips billed records
+export async function cancelSeriesFrom(
+  groupId: string,
+  fromDate: string,
+  scope: 'from_here' | 'all'
+): Promise<{ success: boolean; cancelled: number; skipped: number; error?: string }> {
+  const deny = await checkPermission('schedule.write')
+  if (deny) return { ...deny, cancelled: 0, skipped: 0 }
+
+  if (!groupId) return { success: false, cancelled: 0, skipped: 0, error: 'Chybí ID série' }
+
+  const fromDateObj = new Date(fromDate)
+  fromDateObj.setUTCHours(0, 0, 0, 0)
+
+  const dateFilter = scope === 'from_here' ? { gte: fromDateObj } : undefined
+
+  const targets = await prisma.procedureSchedule.findMany({
+    where: {
+      recurringGroupId: groupId,
+      status: { in: ['planned', 'confirmed'] },
+      billedAt: null,
+      deletedAt: null,
+      ...(dateFilter ? { date: dateFilter } : {}),
+    },
+    select: { id: true },
+  })
+
+  const billedCount = await prisma.procedureSchedule.count({
+    where: {
+      recurringGroupId: groupId,
+      billedAt: { not: null },
+      ...(dateFilter ? { date: dateFilter } : {}),
+    },
+  })
+
+  if (targets.length === 0) {
+    return { success: true, cancelled: 0, skipped: billedCount }
+  }
+
+  const ids = targets.map((t) => t.id)
+  await prisma.procedureSchedule.updateMany({
+    where: { id: { in: ids } },
+    data: { status: 'cancelled' },
+  })
+
+  await writeAuditLog({
+    action: 'schedule.series_cancel',
+    entity: 'ProcedureSchedule',
+    meta: { recurringGroupId: groupId, scope, fromDate, count: ids.length },
+  })
+
+  revalidateAll()
+  return { success: true, cancelled: ids.length, skipped: billedCount }
 }

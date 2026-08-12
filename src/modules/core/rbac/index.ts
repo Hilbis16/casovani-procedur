@@ -13,6 +13,10 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'procedure.read',
     'procedure.write',
     'therapist.read',
+    'prescription.read',
+    'prescription.write',
+    'billing.read',
+    'billing.write',
   ],
   terapeut: [
     'patient.read',
@@ -29,8 +33,12 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'schedule.write',
     'procedure.read',
     'therapist.read',
+    'prescription.read',
+    'prescription.write',
+    'billing.read',
+    'billing.write',
   ],
-  auditor: ['audit.read'],
+  auditor: ['audit.read', 'prescription.read', 'billing.read'],
 }
 
 export async function checkPermission(
